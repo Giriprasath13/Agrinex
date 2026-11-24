@@ -3565,6 +3565,46 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
     return Array.isArray(rows) ? rows : [];
   }
   function saveAccounts(rows){ storage.set(ACCOUNTS_KEY, rows); }
+
+  // Preloaded local-only demo accounts for the project walkthrough.
+  // Credentials are represented as salted SHA-256 digests, never stored as plaintext.
+  function seedDemoAccounts(){
+    const seedVersion = 'agrinex-demo-accounts-v1';
+    if(storage.get('ff_demo_seed_version','') === seedVersion) return;
+
+    const seeded = [
+      {
+        id:'demo-customer-giriprasath',
+        name:'Giriprasath',
+        phone:'9988776655',
+        role:'customer',
+        farmName:'',
+        passwordSalt:'agrinex-demo-customer-2026',
+        passwordDigest:'d4c25d4d414ad21fe976ff030c82174cf5ce07b1263dee68dfdde72015c9c696',
+        createdAt:'2026-11-24T00:00:00.000Z'
+      },
+      {
+        id:'demo-farmer-dharshan',
+        name:'Dharshan',
+        phone:'9977886655',
+        role:'farmer',
+        farmName:'dharshan farms',
+        passwordSalt:'agrinex-demo-farmer-2026',
+        passwordDigest:'4caad21b944f810b60b4b097cc329fb0d83b398ad6ae2289681740aebb99a6b0',
+        createdAt:'2026-11-24T00:00:00.000Z'
+      }
+    ];
+
+    const rows = accounts();
+    for(const account of seeded){
+      const index = rows.findIndex(item => item.phone === account.phone);
+      if(index >= 0) rows[index] = account;
+      else rows.push(account);
+    }
+    saveAccounts(rows);
+    storage.set('ff_demo_seed_version',seedVersion);
+  }
+  seedDemoAccounts();
   function setStatus(role, mode, message, ok){
     const node = $(role + (mode === 'register' ? 'Register' : 'Login') + 'Status');
     if(node){ node.textContent = message || ''; node.classList.toggle('ok', !!ok); }
@@ -3869,6 +3909,26 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
   }else{
     storage.set(DEMO_MODE_KEY,true);
   }
+
+  // Show the preloaded test account labels on both role screens.
+  [
+    {
+      role:'customer',
+      message:'Preloaded demo account: Giriprasath · 9988776655'
+    },
+    {
+      role:'farmer',
+      message:'Preloaded demo account: Dharshan · 9977886655 · dharshan farms'
+    }
+  ].forEach(item => {
+    const view = $(item.role === 'customer' ? 'customerAuthPage' : 'farmerAuthPage');
+    if(!view || view.querySelector('.ff-preloaded-demo-account')) return;
+    const note = document.createElement('div');
+    note.className = 'ff-demo-banner ff-preloaded-demo-account';
+    note.textContent = item.message + ' — sign in with the demo credentials supplied for this walkthrough.';
+    const loginForm = view.querySelector('#' + item.role + 'LoginForm');
+    if(loginForm) view.insertBefore(note,loginForm);
+  });
 
   // Replace misleading server/SMS instructions with explicit demo-mode notices.
   document.querySelectorAll('.auth-form-note').forEach(node => {
