@@ -3117,6 +3117,291 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
     return previousShowPageForAdmin(id);
   };
 
+
+
+  // WhatsApp notification consent is separate from the AgriNex phone number.
+  window.loadWhatsAppPreferences=async function(){
+    if(!token())return;
+    try{
+      const profile=await api()('/api/profile');
+      if($('whatsappOptIn'))$('whatsappOptIn').checked=Boolean(profile.whatsapp_opt_in);
+      if($('whatsappPhone'))$('whatsappPhone').value=profile.whatsapp_phone||profile.phone||'';
+      if($('whatsappLanguage'))$('whatsappLanguage').value=profile.whatsapp_language==='ta'?'ta':'en';
+      if($('whatsappConsentStatus'))$('whatsappConsentStatus').textContent=profile.whatsapp_opt_in
+        ?'Consent is active. You can withdraw it at any time.'
+        :'Consent is off. AgriNex will not send WhatsApp messages until you opt in.';
+    }catch(e){
+      if($('whatsappConsentStatus'))$('whatsappConsentStatus').textContent=e.message||'Could not load your messaging preference.';
+    }
+  };
+
+  window.saveWhatsAppPreferences=async function(){
+    if(!token()){window.openAuthPortal?.('choose');toast('Sign in to manage WhatsApp preferences.');return;}
+    const optedIn=Boolean($('whatsappOptIn')?.checked);
+    const phone=$('whatsappPhone')?.value.trim()||'';
+    const language=$('whatsappLanguage')?.value||'en';
+    if(optedIn&&!phone){toast('Enter the WhatsApp number you want AgriNex to message.');return;}
+    const status=$('whatsappConsentStatus');
+    try{
+      const result=await api()('/api/profile/whatsapp-preferences',{
+        method:'PATCH',
+        body:JSON.stringify({opted_in:optedIn,phone:optedIn?phone:null,language})
+      });
+      if(status)status.textContent=result.opted_in
+        ?'Consent saved. Template messages may be sent for order updates when the provider is configured.'
+        :'Consent withdrawn. AgriNex will no longer send WhatsApp order updates to this number.';
+      toast(optedIn?'WhatsApp consent saved.':'WhatsApp consent withdrawn.');
+    }catch(e){
+      if(status)status.textContent=e.message||'Could not save the preference.';
+      toast(e.message||'Could not save WhatsApp preference.');
+    }
+  };
+
+  window.loadFarmerEvidence=async function(){
+    if(!isFarmer()){window.openAuthPortal?.('farmer');return;}
+    const commodity=$('farmerInsightCommodity')?.value.trim()||'';
+    const district=$('farmerInsightDistrict')?.value.trim()||'';
+    const host=$('farmerEvidenceResult');
+    if(!commodity){if(host)host.textContent='Enter a produce name first.';return;}
+    if(host)host.textContent='Checking imported, dated market observations…';
+    try{
+      const query='?commodity='+encodeURIComponent(commodity)+(district?'&district='+encodeURIComponent(district):'');
+      const data=await api()('/api/farmer/price-guidance'+query);
+      if(!data.available){
+        host.textContent=data.message+' Source required: '+data.data_source_required+'.';
+        return;
+      }
+      host.innerHTML='<b>Verified wholesale observations · INR/kg</b>'+data.observations.map(x=>
+        '<div style="padding:9px 0;border-bottom:1px solid #e5ece6"><b>'+esc(x.market)+', '+esc(x.district)+'</b><br><span class="small">Arrival date: '+esc(x.arrival_date)+' · Modal ₹'+money(x.modal_price_per_kg).replace('₹','')+'/kg · Range ₹'+money(x.min_price_per_kg).replace('₹','')+'–'+money(x.max_price_per_kg).replace('₹','')+'</span><br><a href="'+esc(x.source_url)+'" target="_blank" rel="noopener">View source: '+esc(x.source)+'</a></div>'
+      ).join('')+'<p class="small" style="margin-top:8px">'+esc(data.suggestion)+'</p>';
+    }catch(e){if(host)host.textContent=e.message||'Could not load market observations.';}
+  };
+
+  window.loadFarmerDemandSignals=async function(){
+    if(!isFarmer()){window.openAuthPortal?.('farmer');return;}
+    const host=$('farmerDemandResult');if(host)host.textContent='Summarising your AgriNex orders…';
+    try{
+      const data=await api()('/api/farmer/demand-signals');
+      if(!data.signals?.length){
+        host.textContent='No AgriNex order history is available yet. This is not an estimate of total local market demand.';
+        return;
+      }
+      host.innerHTML='<b>Your own AgriNex order history</b><p class="small">This is internal marketplace demand, not city-wide or mandi demand.</p>'+data.signals.map(x=>
+        '<div style="padding:6px 0;border-bottom:1px solid #e5ece6">'+esc(x.product_name)+': '+esc(x.delivered_quantity)+' '+esc(x.unit)+' delivered · '+esc(x.ordered_quantity)+' '+esc(x.unit)+' ordered · '+esc(x.cancelled_quantity)+' '+esc(x.unit)+' cancelled</div>'
+      ).join('');
+    }catch(e){if(host)host.textContent=e.message||'Could not load AgriNex order history.';}
+  };
+
+  window.loadFarmerPayoutReadiness=async function(){
+    if(!isFarmer()){window.openAuthPortal?.('farmer');return;}
+    const host=$('farmerPayoutStatus');if(host)host.textContent='Checking delivered orders and recorded collections…';
+    try{
+      const data=await api()('/api/farmer/payout-readiness');
+      if(host)host.textContent=data.eligible_count+' delivered item(s), ₹'+Number(data.eligible_amount_inr||0).toLocaleString('en-IN')+' eligible for manual settlement review. Automatic transfers are disabled. '+data.message;
+    }catch(e){if(host)host.textContent=e.message||'Could not check settlement readiness.';}
+  };
+
+  window.importVerifiedMarketPrices=async function(){
+    if(!token()){window.openAuthPortal?.('choose');return;}
+    const status=$('marketPriceImportStatus');
+    let rows;
+    try{rows=JSON.parse($('marketPriceImportJson')?.value||'');}
+    catch(_){if(status)status.textContent='Enter valid JSON containing an array of verified observation rows.';return;}
+    if(!Array.isArray(rows)||!rows.length||rows.length>500){
+      if(status)status.textContent='Provide an array containing 1 to 500 verified rows.';
+      return;
+    }
+    if(status)status.textContent='Checking administrator permission and importing source rows…';
+    try{
+      const result=await api()('/api/admin/market-prices/import',{
+        method:'POST',
+        body:JSON.stringify(rows)
+      });
+      if(status)status.textContent='Imported '+Number(result.upserted||0)+' verified observation row(s).';
+      $('marketPriceImportJson').value='';
+      toast('Verified market observations imported.');
+    }catch(e){
+      if(status)status.textContent=e.message||'Import failed. Administrator access is required.';
+    }
+  };
+
+  window.confirmCodCollection=async function(){
+    if(!token()){window.openAuthPortal?.('choose');return;}
+    const orderId=$('adminCodOrderId')?.value.trim()||'';
+    const status=$('adminCodStatus');
+    if(!orderId){if(status)status.textContent='Enter the AgriNex order UUID after checking the actual collection record.';return;}
+    if(!confirm('Confirm that the COD amount for this delivered order has actually been collected?'))return;
+    if(status)status.textContent='Requesting administrator-confirmed collection record…';
+    try{
+      const result=await api()('/api/admin/orders/'+encodeURIComponent(orderId)+'/cod-collected',{method:'POST'});
+      if(status)status.textContent='Collection recorded: '+result.payment_status+'. This is a ledger record, not a money transfer.';
+      $('adminCodOrderId').value='';
+    }catch(e){if(status)status.textContent=e.message||'Administrator access is required.';}
+  };
+
+  window.bookFarmerShipment=async function(orderId){
+    if(!isFarmer()){window.openAuthPortal?.('farmer');return;}
+    if(!window.ffPaymentConfiguration?.shiprocket){toast('Live carrier booking is disabled or not configured for this pilot.');return;}
+    const dims={
+      length_cm:Number(prompt('Parcel length in cm','20')),
+      breadth_cm:Number(prompt('Parcel breadth in cm','15')),
+      height_cm:Number(prompt('Parcel height in cm','10')),
+      weight_kg:Number(prompt('Parcel weight in kg','1')),
+      strategy:'cheapest'
+    };
+    if(Object.values(dims).some(x=>typeof x==='number'&&(!Number.isFinite(x)||x<=0))){toast('Enter valid parcel dimensions and weight.');return;}
+    try{
+      const data=await api()('/api/orders/'+encodeURIComponent(orderId)+'/shipment',{method:'POST',body:JSON.stringify(dims)});
+      toast('Carrier booking response received: '+(data.awb_code||data.status||'check shipment details'));
+      await loadFarmerDashboard();
+    }catch(e){toast(e.message||'Shipment could not be booked.');}
+  };
+
+  // Broad Tamil translation for shared navigation, checkout, forms and primary workflows.
+  // Original text is cached per DOM node so switching back to English is lossless.
+  const sharedTamil=Object.freeze({
+    'Home':'முகப்பு','Shop':'கடை','Marketplace':'சந்தை','Categories':'வகைகள்',
+    'Farmers':'விவசாயிகள்','Farmers near you':'உங்களுக்கு அருகிலுள்ள விவசாயிகள்',
+    'Bulk orders':'மொத்த ஆர்டர்கள்','Bulk Order Marketplace':'மொத்த கொள்முதல் சந்தை',
+    'AI Assistant':'AI உதவியாளர்','Farm AI':'பண்ணை AI','Supply Chain':'விநியோகச் சங்கிலி',
+    'Sell':'விற்க','Inventory':'இருப்பு','Notifications':'அறிவிப்புகள்',
+    'Orders':'ஆர்டர்கள்','Your orders':'உங்கள் ஆர்டர்கள்','Wishlist':'விருப்பப் பட்டியல்',
+    'Cart':'கூடை','Login / Sign up':'உள்நுழை / பதிவு செய்','Sign in':'உள்நுழை',
+    'Sign in as customer →':'வாடிக்கையாளராக உள்நுழை →',
+    'Create customer account →':'வாடிக்கையாளர் கணக்கை உருவாக்கு →',
+    'Sign in to farmer dashboard →':'விவசாயி கணக்கில் உள்நுழை →',
+    'Create farmer account →':'விவசாயி கணக்கை உருவாக்கு →',
+    'Search tomatoes, rice, organic, nearby farmers...':'தக்காளி, அரிசி, இயற்கை விளைபொருள், அருகிலுள்ள விவசாயிகள் எனத் தேடுங்கள்...',
+    'Shop by category':'வகைப்படி வாங்குங்கள்','Fresh near you':'உங்களுக்கு அருகிலுள்ள புதிய விளைபொருட்கள்',
+    'Our core promise':'எங்கள் முக்கிய உறுதி','Price transparency':'விலை வெளிப்படைத்தன்மை',
+    'Freshness guide':'புத்துணர்வு வழிகாட்டி','Reduce waste':'வீணாவதை குறைப்போம்',
+    'Safer marketplace':'பாதுகாப்பான சந்தை','Use AI wisely':'AI-ஐ பொறுப்புடன் பயன்படுத்துங்கள்',
+    'Your cart':'உங்கள் கூடை','Order summary':'ஆர்டர் சுருக்கம்','Review cart':'கூடையைப் பாருங்கள்',
+    'Review your basket':'உங்கள் பொருட்களைச் சரிபார்க்கவும்','Delivery address':'விநியோக முகவரி',
+    'Payment method':'கட்டண முறை','Payment':'கட்டணம்','Cash on Delivery':'பொருள் கிடைக்கும் போது பணம் செலுத்துதல்',
+    'Place COD order →':'பொருள் கிடைக்கும் போது பணம் செலுத்தி ஆர்டர் செய் →',
+    'Continue to test payment →':'சோதனை கட்டணத்திற்குச் செல்லவும் →',
+    'Add delivery address':'விநியோக முகவரியைச் சேர்க்கவும்','Save address':'முகவரியைச் சேமி',
+    'Full name':'முழுப் பெயர்','Mobile':'கைபேசி எண்','Email (required for courier booking)':'மின்னஞ்சல் (கூரியர் முன்பதிவுக்கு தேவை)',
+    'Pincode':'அஞ்சல் குறியீடு','House / Street / Area':'வீட்டு எண் / தெரு / பகுதி',
+    'City':'நகரம்','State':'மாநிலம்','Label':'குறிப்பு',
+    'Continue to address →':'முகவரிக்குச் செல்லவும் →','Back':'பின்னால்',
+    'Farmer dashboard':'விவசாயி டாஷ்போர்டு','Buyer orders':'வாங்குபவர் ஆர்டர்கள்',
+    'Products & inventory':'பொருட்கள் மற்றும் இருப்பு','Add product':'பொருளைச் சேர்க்கவும்',
+    'Farm details & verification request':'பண்ணை விவரங்கள் மற்றும் சரிபார்ப்பு கோரிக்கை',
+    'Farm name':'பண்ணையின் பெயர்','Village':'கிராமம்','District':'மாவட்டம்',
+    'Farm pincode':'பண்ணையின் அஞ்சல் குறியீடு','Farm type':'பண்ணை வகை',
+    'Farm description':'பண்ணை விளக்கம்','Preferred language':'விரும்பும் மொழி',
+    'Save & submit for review':'சேமித்து சரிபார்ப்புக்கு அனுப்பு',
+    '🌾 Easy Farmer Mode':'🌾 எளிய விவசாயி முறை',
+    'Sell my harvest':'என் அறுவடையை விற்கவும்','Speak instead of typing':'தட்டச்சு செய்யாமல் பேசுங்கள்',
+    'Take product photo':'பொருளின் புகைப்படம் எடுக்கவும்','Camera-first listing':'கேமரா மூலம் பட்டியல்',
+    'Hear my dashboard':'என் டாஷ்போர்டைக் கேளுங்கள்','Voice summary':'குரல் சுருக்கம்',
+    'Check live backend':'சேவையக நிலையைச் சரிபார்க்கவும்',
+    'Completed order value':'நிறைவு செய்யப்பட்ட ஆர்டர் மதிப்பு',
+    'Active products':'செயலில் உள்ள பொருட்கள்','Pending orders':'நிலுவை ஆர்டர்கள்',
+    'Estimated payout outstanding':'மதிப்பிடப்பட்ட நிலுவைத் தொகை',
+    'Optional WhatsApp order updates':'விருப்பத்தேர்வு WhatsApp ஆர்டர் அறிவிப்புகள்',
+    'I agree to receive AgriNex order updates on WhatsApp.':'AgriNex ஆர்டர் அறிவிப்புகளை WhatsApp-ல் பெற சம்மதிக்கிறேன்.',
+    'Save notification preference':'அறிவிப்பு விருப்பத்தைச் சேமி',
+    'Verified market prices and your sales demand':'சரிபார்க்கப்பட்ட சந்தை விலைகள் மற்றும் உங்கள் விற்பனைத் தேவை',
+    'Produce name':'விளைபொருளின் பெயர்','Check verified data':'சரிபார்க்கப்பட்ட தரவைப் பார்க்கவும்',
+    'My AgriNex demand':'எனது AgriNex ஆர்டர் தேவை','Settlement readiness':'தீர்வு தயார்நிலை',
+    'Check eligible settlements':'தீர்வுக்குத் தகுதியான தொகையைச் சரிபார்க்கவும்',
+    'AgriNex administration':'AgriNex நிர்வாகம்','Farmer verification queue':'விவசாயி சரிபார்ப்பு பட்டியல்',
+    'Import verified mandi-price observations':'சரிபார்க்கப்பட்ட மண்டி விலைத் தரவை இறக்குமதி செய்',
+    'Import verified rows':'சரிபார்க்கப்பட்ட பதிவுகளை இறக்குமதி செய்',
+    'COD collection reconciliation':'பொருள் கிடைக்கும் போது பணம் வசூல் சரிபார்ப்பு',
+    'Confirm collected COD':'வசூலான COD தொகையை உறுதிப்படுத்து',
+    'Select a category':'வகையைத் தேர்ந்தெடுக்கவும்','Other':'மற்றவை',
+    'Vegetables':'காய்கறிகள்','Fruits':'பழங்கள்','Grains':'தானியங்கள்',
+    'Dairy':'பால் பொருட்கள்','Organic':'இயற்கை விளைபொருட்கள்','Liquids':'திரவங்கள்',
+    'Available today':'இன்று கிடைக்கும்','All products':'அனைத்து பொருட்களும்',
+    'Under ₹200 basket':'₹200-க்குள் கூடை','Fast checkout':'விரைவான கட்டணம்',
+    'Order confirmed':'ஆர்டர் உறுதிசெய்யப்பட்டது','Order sent to the farmer':'விவசாயிக்கு ஆர்டர் அனுப்பப்பட்டது',
+    'Your order journey starts here':'உங்கள் ஆர்டர் பயணம் இங்கே தொடங்குகிறது',
+    'Save':'சேமி','Cancel':'ரத்து செய்','Refresh':'புதுப்பி',
+    'Required by (optional)':'தேவைப்படும் தேதி (விருப்பம்)',
+    'Delivery city':'விநியோக நகரம்','Delivery pincode':'விநியோக அஞ்சல் குறியீடு',
+    'Additional details':'கூடுதல் விவரங்கள்','Post a bulk requirement':'மொத்தத் தேவையைப் பதிவிடுங்கள்',
+    'Post requirement':'தேவையைப் பதிவிடுங்கள்','Open buyer requests':'வாங்குபவர்களின் திறந்த கோரிக்கைகள்',
+    'Make an offer':'விலை முன்மொழிவை அனுப்புங்கள்','View farmer offers':'விவசாயிகளின் முன்மொழிவுகளைப் பாருங்கள்'
+  });
+  const originalTextNodes=new WeakMap();
+  const originalAttributes=new WeakMap();
+  let translatingPage=false;
+  function translateSharedPage(){
+    if(translatingPage||!document.body)return;
+    translatingPage=true;
+    try{
+      const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);
+      let node;
+      while((node=walker.nextNode())){
+        if(!originalTextNodes.has(node))originalTextNodes.set(node,node.nodeValue);
+        const original=originalTextNodes.get(node)||'';
+        const trimmed=original.trim();
+        if(!trimmed)continue;
+        const translated=farmerLanguage==='ta'?(sharedTamil[trimmed]||trimmed):trimmed;
+        if(translated!==trimmed){
+          const leading=original.match(/^\\s*/)?.[0]||'';
+          const trailing=original.match(/\\s*$/)?.[0]||'';
+          node.nodeValue=leading+translated+trailing;
+        }else if(farmerLanguage!=='ta'&&node.nodeValue!==original){
+          node.nodeValue=original;
+        }
+      }
+      document.querySelectorAll('[placeholder],[aria-label],[title]').forEach(el=>{
+        let saved=originalAttributes.get(el);
+        if(!saved){saved={};originalAttributes.set(el,saved);}
+        for(const attr of ['placeholder','aria-label','title']){
+          if(!el.hasAttribute(attr))continue;
+          if(!(attr in saved))saved[attr]=el.getAttribute(attr);
+          const original=saved[attr];
+          el.setAttribute(attr,farmerLanguage==='ta'?(sharedTamil[original]||original):original);
+        }
+      });
+      document.documentElement.lang=farmerLanguage==='ta'?'ta':'en';
+      if($('farmerLangToggle'))$('farmerLangToggle').textContent=farmerLanguage==='ta'?'English':'தமிழ்';
+    }finally{translatingPage=false;}
+  }
+  window.applyFarmerLanguage=function(){
+    translateFarmerText();
+    translateSharedPage();
+  };
+  window.toggleFarmerLanguage=async function(){
+    farmerLanguage=farmerLanguage==='ta'?'en':'ta';
+    localStorage.setItem('ff_farmer_language',farmerLanguage);
+    window.applyFarmerLanguage();
+    if(token()){
+      try{await api()('/api/profile',{method:'PATCH',body:JSON.stringify({preferred_language:farmerLanguage})});}
+      catch(e){toast('Language changed on this device. Server preference could not be saved.');return;}
+    }
+    toast(farmerLanguage==='ta'?'தமிழ் மொழி தேர்ந்தெடுக்கப்பட்டது':'English selected');
+  };
+  if(document.body){
+    const languageObserver=new MutationObserver(()=>translateSharedPage());
+    languageObserver.observe(document.body,{childList:true,subtree:true,characterData:true});
+    document.addEventListener('DOMContentLoaded',window.applyFarmerLanguage);
+    window.addEventListener('load',window.applyFarmerLanguage);
+  }
+
+  const previousShowPageIntegrations=window.showPage;
+  window.showPage=function(id){
+    const result=previousShowPageIntegrations?.(id);
+    if(id==='orders'&&token())window.loadWhatsAppPreferences();
+    if(id==='farmer'&&isFarmer()){
+      window.loadFarmerDemandSignals();
+      window.loadFarmerPayoutReadiness();
+    }
+    if(id==='admin'&&window.ffAdminAuthorized){
+      // Import and reconciliation controls are already rendered in the protected admin page.
+    }
+    queueMicrotask(window.applyFarmerLanguage);
+    return result;
+  };
+
+  const adminOrderHeader=$('adminFarmerApplications')?.closest('section');
+
   const oldBackendBoot=window.ffBackend?.boot;
   if(window.ffBackend&&oldBackendBoot){
     window.ffBackend.boot=async function(){
