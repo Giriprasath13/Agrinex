@@ -9,7 +9,9 @@ create table if not exists public.agrinex_profiles (
     farm_name text,
     farmer_status text not null default 'not_applicable'
         check (farmer_status in ('not_applicable', 'pending', 'approved', 'rejected')),
-    created_at timestamptz not null default now()
+    created_at timestamptz not null default now(),
+    constraint agrinex_farmer_farm_name_required
+        check (role <> 'farmer' or nullif(trim(farm_name), '') is not null)
 );
 
 alter table public.agrinex_profiles enable row level security;
@@ -26,17 +28,24 @@ create policy "Users can read their own AgriNex profile"
     to authenticated
     using ((select auth.uid()) = id);
 
-create or replace function public.handle_agrinex_user_created()
+-- Trigger functions run with their owner's privileges. Keep this function
+-- outside exposed schemas and revoke direct execution from API roles.
+create schema if not exists private;
+revoke all on schema private from public, anon, authenticated;
+
+create or replace function private.handle_agrinex_user_created()
 returns trigger
 language plpgsql
 security definer
-set search_path = public
+set search_path = ''
 as $$
 declare
     requested_role text;
     profile_name text;
     profile_farm text;
 begin
+    -- role is an explicit, validated customer/farmer choice from signup.
+    -- Farmer privileges remain disabled until farmer_status is approved.
     requested_role := case
         when new.raw_user_meta_data ->> 'role' = 'farmer' then 'farmer'
         else 'customer'
@@ -70,9 +79,12 @@ begin
 end;
 $$;
 
+revoke all on function private.handle_agrinex_user_created()
+    from public, anon, authenticated;
+
 drop trigger if exists on_agrinex_auth_user_created on auth.users;
 
 create trigger on_agrinex_auth_user_created
 after insert on auth.users
 for each row
-execute function public.handle_agrinex_user_created();
+execute function private.handle_agrinex_user_created();
