@@ -57,7 +57,7 @@
 
   function applySignedInUser(profile) {
     write(PROFILE_KEY, profile);
-    window.currentUser = {
+    currentUser = {
       id: profile.id,
       name: profile.full_name,
       contact: profile.phone,
@@ -157,7 +157,7 @@
       try { await request('/auth/v1/logout', { method: 'POST' }, token); } catch (error) { console.warn('Sign-out request:', error); }
     }
     [ACCESS_KEY, REFRESH_KEY, PROFILE_KEY, 'ff_user', 'ff_access_token'].forEach(clear);
-    window.currentUser = null;
+    currentUser = null;
     if (typeof updateProfileUI === 'function') updateProfileUI(true);
     if (typeof closeModals === 'function') closeModals();
     toast('Signed out.');
@@ -182,7 +182,7 @@
   }
 
   async function loadFarmerProducts() {
-    const profile = window.currentUser;
+    const profile = currentUser;
     const token = read(ACCESS_KEY);
     if (!profile || profile.role !== 'farmer' || !token) return;
     try {
@@ -201,7 +201,7 @@
           image: row.image_url || '', unit: row.unit || 'kg', location: row.district || '',
           status: row.status
         };
-        const existing = (window.products || []).findIndex((p) => p.serverId === row.id);
+        const existing = (products || []).findIndex((p) => p.serverId === row.id);
         if (existing >= 0) products[existing] = item;
         else products.unshift(item);
       });
@@ -215,7 +215,7 @@
 
   const originalAddProduct = window.addProduct;
   window.addProduct = async function () {
-    const profile = window.currentUser;
+    const profile = currentUser;
     if (!profile || profile.role !== 'farmer') {
       if (profile && profile.requestedRole === 'farmer') {
         toast('Farmer account approval is pending. You cannot publish listings yet.');
