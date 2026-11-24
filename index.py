@@ -859,8 +859,19 @@ async def create_customer_order(body: OrderCreateRequest, authorization: str | N
         access_token=token,
         payload={"p_items": items, "p_address": address_snapshot, "p_payment_method": body.payment_method},
     )
-    await supabase_request("DELETE", "/rest/v1/agrinex_cart_items",
-                           access_token=token, params={"user_id": f"eq.{profile['id']}"})
+    cart_cleared = True
+    try:
+        await supabase_request(
+            "DELETE", "/rest/v1/agrinex_cart_items",
+            access_token=token,
+            params={"user_id": f"eq.{profile['id']}"},
+        )
+    except HTTPException:
+        # The order transaction is already committed. Do not return an error that
+        # could encourage the customer to submit the same checkout again.
+        cart_cleared = False
+    if isinstance(result, dict):
+        result["cart_cleared"] = cart_cleared
     return result
 
 
@@ -990,6 +1001,21 @@ async def make_bulk_offer(request_id: str, body: BulkOfferCreate, authorization:
     row.update({"request_id": request_id, "farmer_id": profile["id"], "farmer_name": profile["full_name"]})
     if row.get("product_id"):
         row["product_id"] = _uuid_or_422(row["product_id"], "product ID")
+        product_rows = await supabase_request(
+            "GET", "/rest/v1/agrinex_products",
+            access_token=token,
+            params={
+                "select": "id,farmer_id,stock,status,unit",
+                "id": f"eq.{row['product_id']}",
+                "farmer_id": f"eq.{profile['id']}",
+                "limit": "1",
+            },
+        )
+        product = _first_row(product_rows)
+        if not product or product.get("status") != "active":
+            raise HTTPException(status_code=422, detail="Choose one of your active product listings for this offer.")
+        if body.offered_quantity > float(product.get("stock") or 0):
+            raise HTTPException(status_code=409, detail=f"Only {product.get('stock')} {product.get('unit')} are currently available for this offer.")
     result = await supabase_request(
         "POST", "/rest/v1/agrinex_bulk_offers",
         access_token=token, payload=row,
