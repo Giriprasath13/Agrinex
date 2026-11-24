@@ -1509,12 +1509,10 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
   async function syncOrders(){if(!token())return; const rows=await api('/api/orders'); orders=rows.map(mapOrder); if(!orders.length)orders=[]; persist(); renderOrders(); renderTracking();}
   async function syncNotifications(){if(!token())return; const rows=await api('/api/notifications'); notifications=rows.map(n=>({id:n.id,icon:n.type==='payment'?'💳':n.type==='order'?'📦':'🔔',title:n.title,text:n.message,unread:!n.read})); persistNotifications(); renderNotifications();}
   async function bootBackend(){
-    if(storage.get('ff_demo_mode',false)){
-      backendReady=false;
-      backendStatus();
-      syncing=false;
-      return;
-    }
+    backendReady=false;
+    backendStatus();
+    syncing=false;
+    return;
     if(syncing)return; syncing=true;
     try{
       await api('/health'); backendReady=true; backendStatus();
@@ -1572,7 +1570,7 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
   window.logoutDemo=function(){storage.remove('ff_access_token');currentUser=null;storage.remove('ff_user');updateProfileUI(true);cart=[];orders=[];closeModals();toast('Signed out');};
   // Realtime order/stock updates.
   async function connectSocket(){
-    if(storage.get('ff_demo_mode',false))return;
+    return;
     if(!token())return; const u=new URL(apiBase());u.protocol=u.protocol==='https:'?'wss:':'ws:';u.pathname='/ws/events';u.search='?token='+encodeURIComponent(token());
     try{const ws=new WebSocket(u.toString());ws.onmessage=async(ev)=>{try{const msg=JSON.parse(ev.data);if(['inventory.updated','order.status','payment.verified','order.created','farmer.order.created'].includes(msg.type)){await Promise.allSettled([syncProducts(),syncCart(),syncOrders(),syncNotifications()]);toast('Live update received');}}catch(_){}};ws.onclose=()=>setTimeout(connectSocket,5000);}catch(_){}}
 
@@ -3865,9 +3863,11 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
       storage.set('ff_access_token','DEMO-LOCAL-ONLY-' + saved.id);
       if(typeof updateProfileUI === 'function') updateProfileUI();
     }else{
-      storage.remove(DEMO_MODE_KEY);
+      storage.set(DEMO_MODE_KEY,true);
       storage.remove('ff_access_token');
     }
+  }else{
+    storage.set(DEMO_MODE_KEY,true);
   }
 
   // Replace misleading server/SMS instructions with explicit demo-mode notices.
@@ -3878,6 +3878,14 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
   if(productNote) productNote.textContent = 'Frontend demo only. Products added here are saved in this browser and are not shared with other users.';
   const farmerNote = document.querySelector('#farmerAuthPage .auth-form-note');
   if(farmerNote) farmerNote.textContent = 'Demo farmer access is enabled locally so you can test the dashboard and inventory. No real farmer verification is performed.';
+
+  if(window.ffBackend){
+    window.ffBackend.boot = async function(){
+      backendReady = false;
+      if(typeof backendStatus === 'function') backendStatus();
+      return { demoMode:true, backendConnected:false };
+    };
+  }
 
   window.ffDemoAuth = {
     enabled:true,
