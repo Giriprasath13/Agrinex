@@ -1408,7 +1408,7 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
     const phone=$('loginContact')?.value.trim(); const password=$('loginPassword')?.value||'';
     if(!/^[0-9]{10}$/.test(phone)){toast('Enter a valid 10-digit mobile number');return}
     if(password.length<8){toast('Password must be at least 8 characters');return}
-    try{const d=await api('/api/auth/login',{method:'POST',body:JSON.stringify({phone,password})});storage.set('ff_access_token',d.access_token);currentUser={name:d.user.name,contact:d.user.phone,role:d.user.role,signedInAt:new Date().toISOString()};storage.set('ff_user',currentUser);closeModals();updateProfileUI();renderAccountActions();backendReady=true;await Promise.allSettled([syncProducts(),syncCart(),syncAddresses(),syncOrders(),syncNotifications()]);toast('Login successful');}
+    try{const d=await api('/api/auth/login',{method:'POST',body:JSON.stringify({phone,password})});storage.set('ff_access_token',d.access_token);currentUser={id:d.user.id,name:d.user.name,contact:d.user.phone,role:d.user.role,farmerStatus:d.user.farmer_status||'not_applicable',preferredLanguage:d.user.preferred_language||'en',farmName:d.user.farm_name||'',signedInAt:new Date().toISOString()};storage.set('ff_user',currentUser);closeModals();updateProfileUI();renderAccountActions();backendReady=true;await Promise.allSettled([syncProducts(),syncCart(),syncAddresses(),syncOrders(),syncNotifications()]);toast('Login successful');}
     catch(e){toast(e.message||'Login failed. You can still use demo mode.');}
   };
   window.registerBackendUser=async function(){
@@ -1417,7 +1417,7 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
     if(password.length<8){toast('Password must be at least 8 characters');return}
     if(role==='farmer'&&!farmName){toast('Enter your farm name');return}
     const name=role==='farmer'?(farmName||'Farmer'):'AgriNex Customer';
-    try{const d=await api('/api/auth/register',{method:'POST',body:JSON.stringify({phone,name,password,role,farm_name:farmName||null})});storage.set('ff_access_token',d.access_token);currentUser={name:d.user.name,contact:d.user.phone,role:d.user.role,signedInAt:new Date().toISOString()};storage.set('ff_user',currentUser);closeModals();updateProfileUI();renderAccountActions();backendReady=true;await Promise.allSettled([syncProducts(),syncCart(),syncAddresses(),syncOrders(),syncNotifications()]);toast('Account created and signed in');}
+    try{const d=await api('/api/auth/register',{method:'POST',body:JSON.stringify({phone,name,password,role,farm_name:farmName||null})});storage.set('ff_access_token',d.access_token);currentUser={id:d.user.id,name:d.user.name,contact:d.user.phone,role:d.user.role,farmerStatus:d.user.farmer_status||'not_applicable',preferredLanguage:d.user.preferred_language||'en',farmName:d.user.farm_name||'',signedInAt:new Date().toISOString()};storage.set('ff_user',currentUser);closeModals();updateProfileUI();renderAccountActions();backendReady=true;await Promise.allSettled([syncProducts(),syncCart(),syncAddresses(),syncOrders(),syncNotifications()]);toast('Account created and signed in');}
     catch(e){toast(e.message||'Could not create account')}
   };
   window.addToCartById=async function(id,qty=1){
@@ -2534,7 +2534,7 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
   window.deleteProductById=async function(id){
     const p=(window.ffFarmerProducts||[]).find(x=>String(x.serverId)===String(id));if(!p)return;
     if(!confirm('Delete '+p.name+' from your listings?'))return;
-    try{await api()('/api/products/'+encodeURIComponent(id),{method:'DELETE'});await loadFarmerInventory();await loadPublicProducts();toast('Product deleted.');}
+    try{await api()('/api/products/'+encodeURIComponent(id),{method:'DELETE'});await loadFarmerInventory();await loadPublicProducts();toast('Product archived. Past order history is preserved.');}
     catch(e){toast(e.message||'Product could not be deleted.');}
   };
 
@@ -2912,9 +2912,16 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
   window.loadFarmerDashboard=loadFarmerDashboard;
   window.addEventListener('online',function(){if(isFarmer())toast('You are back online. Use Sync saved drafts to upload offline listings.');});
   window.addEventListener('DOMContentLoaded',function(){
-    if(isFarmer())loadFarmerDashboard();
-    if($('bulkMarketplace')&&token())loadBulkMarketplace();
     applyFarmerLanguage();
+  });
+  // The original API boot restores the stored user after DOMContentLoaded.
+  // Re-read the authenticated profile after that boot so a returning farmer
+  // sees live inventory, orders and earnings on the first screen load.
+  window.addEventListener('load',async function(){
+    try{await window.ffBackend?.boot?.();}catch(_){}
+    if(isFarmer())await loadFarmerDashboard();
+    if($('bulkMarketplace')&&token())await loadBulkMarketplace();
+    if(!token())await loadPublicProducts().catch(()=>{});
   });
   // The API bootstrap is delayed in the original script, so also refresh role-specific farmer data afterwards.
 
