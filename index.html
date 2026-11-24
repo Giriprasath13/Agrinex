@@ -2431,19 +2431,22 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
 
   window.renderInventory=function(){
     const t=$('inventoryTable');if(!t)return;
-    if(!isFarmer()){
-      t.innerHTML='<tr><td colspan="6">Sign in with an approved farmer account to manage inventory.</td></tr>';return;
-    }
+    if(!isFarmer()){t.innerHTML='<tr><td colspan="6">Sign in with an approved farmer account to manage inventory.</td></tr>';return;}
     const list=window.ffFarmerProducts||[];
-    if(!list.length){
-      t.innerHTML='<tr><td colspan="6" class="small">No saved products yet. Add a listing to start your catalogue.</td></tr>';return;
-    }
+    if(!list.length){t.innerHTML='<tr><td colspan="6" class="small">No saved products yet. Add a listing to start your catalogue.</td></tr>';return;}
     t.innerHTML=list.map(p=>{
       const status=p.status==='active'?'Live':p.status==='draft'?'Draft':p.status==='paused'?'Paused':p.status;
       const statusClass=p.status==='active'?'ok':p.status==='draft'?'warn':'bad';
       const id=esc(p.serverId);
-      return '<tr><td>'+esc(p.name)+'<br><small>'+esc(p.category)+' · '+esc(p.variety||'')+'</small></td><td>'+money(p.price)+'/'+esc(p.unit)+'</td><td>'+esc(p.stock)+'</td><td><span class="status '+statusClass+'">'+esc(status)+'</span></td><td>'+money(Math.max(0,Number(p.price||0)*0.99))+' <small>gross estimate before any confirmed charges</small></td><td><button class="btn btn-light" style="padding:6px 8px;font-size:8px" onclick="restockById(\''+id+'\')">Edit stock</button> <button class="btn btn-soft" style="padding:6px 8px;font-size:8px" onclick="editProductById(\''+id+'\')">Edit</button> <button class="btn btn-danger" style="padding:6px 8px;font-size:8px" onclick="deleteProductById(\''+id+'\')">Delete</button></td></tr>';
+      return '<tr><td>'+esc(p.name)+'<br><small>'+esc(p.category)+' · '+esc(p.variety||'')+'</small></td><td>'+money(p.price)+'/'+esc(p.unit)+'</td><td>'+esc(p.stock)+'</td><td><span class="status '+statusClass+'">'+esc(status)+'</span></td><td>'+money(Number(p.price||0)*Number(p.stock||0))+' <small>listing value, not payout</small></td><td><button class="btn btn-light" data-action="stock" data-id="'+id+'" style="padding:6px 8px;font-size:8px">Edit stock</button> <button class="btn btn-soft" data-action="edit" data-id="'+id+'" style="padding:6px 8px;font-size:8px">Edit</button> <button class="btn btn-danger" data-action="delete" data-id="'+id+'" style="padding:6px 8px;font-size:8px">Delete</button></td></tr>';
     }).join('');
+    t.onclick=function(event){
+      const button=event.target.closest('[data-action]');if(!button)return;
+      const id=button.dataset.id;
+      if(button.dataset.action==='stock')window.restockById(id);
+      if(button.dataset.action==='edit')window.editProductById(id);
+      if(button.dataset.action==='delete')window.deleteProductById(id);
+    };
   };
 
   window.renderFarmerOrdersTable=function(){
@@ -2763,7 +2766,7 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
       const x=groups.get(key);x.count++;x.products.push(p);
     });
     if(!groups.size){box.innerHTML='<div class="card empty" style="grid-column:1/-1">Approved farmers and their live product listings will appear here.</div>';return;}
-    box.innerHTML=Array.from(groups.values()).map(f=>'<div class="card seller"><div class="avatar">👨‍🌾</div><div><h4>'+esc(f.farm)+' ✓</h4><p>'+esc(f.name)+' · '+esc(f.district)+'</p><div class="chips"><span class="chip">✓ Verified farmer</span><span class="chip">'+f.count+' active listing(s)</span></div><button class="btn btn-light" style="margin-top:9px" onclick="showPage(\\'marketplace\\')">View produce</button></div></div>').join('');
+    box.innerHTML=Array.from(groups.values()).map(f=>'<div class="card seller"><div class="avatar">👨‍🌾</div><div><h4>'+esc(f.farm)+' ✓</h4><p>'+esc(f.name)+' · '+esc(f.district)+'</p><div class="chips"><span class="chip">✓ Verified farmer</span><span class="chip">'+f.count+' active listing(s)</span></div><button class="btn btn-light" style="margin-top:9px" onclick="showPage(&quot;marketplace&quot;)">View produce</button></div></div>').join('');
   };
 
   window.createBulkRequest=async function(){
@@ -2802,8 +2805,8 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
         const requestId=esc(r.id);
         const isBuyer=String(r.buyer_id)===String(currentUser.id);
         const actions=isFarmer()&&currentUser.farmerStatus==='approved'
-          ?'<div class="bulk-request-actions"><button class="btn btn-primary" onclick="openBulkOfferForm(\\''+requestId+'\\')">Make an offer</button></div><div id="bulkOfferForm-'+requestId+'"></div>'
-          :isBuyer?'<div class="bulk-request-actions"><button class="btn btn-light" onclick="loadBulkOffers(\\''+requestId+'\\')">View farmer offers</button></div><div id="bulkOffers-'+requestId+'"></div>':'';
+          ?'<div class="bulk-request-actions"><button class="btn btn-primary" onclick="openBulkOfferForm(&quot;'+requestId+'&quot;)">Make an offer</button></div><div id="bulkOfferForm-'+requestId+'"></div>'
+          :isBuyer?'<div class="bulk-request-actions"><button class="btn btn-light" onclick="loadBulkOffers(&quot;'+requestId+'&quot;)">View farmer offers</button></div><div id="bulkOffers-'+requestId+'"></div>':'';
         return '<article class="bulk-request-card"><h3>'+esc(r.product_name)+'</h3><p>'+esc(r.category)+' · Requested by '+(isBuyer?'you':'business buyer')+'</p><div class="bulk-request-meta"><span>'+esc(r.quantity)+' '+esc(r.unit)+'</span>'+(r.target_price?'<span>Target '+money(r.target_price)+'</span>':'')+(r.needed_by?'<span>Needed '+esc(r.needed_by)+'</span>':'')+(r.delivery_city?'<span>📍 '+esc(r.delivery_city)+'</span>':'')+'<span>'+esc(r.status)+'</span></div>'+(r.notes?'<p>'+esc(r.notes)+'</p>':'')+actions+'</article>';
       }).join('');
     }catch(e){box.innerHTML='<div class="card empty">'+esc(e.message||'Could not load bulk requests.')+'</div>';}
@@ -2813,7 +2816,7 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
     const host=$('bulkOfferForm-'+id);if(!host)return;
     if(!isFarmer()||currentUser.farmerStatus!=='approved'){toast('Only approved farmer accounts can send a bulk offer.');return;}
     const productsForOffer=window.ffFarmerProducts||[];
-    host.innerHTML='<div class="bulk-offer-panel"><label>Choose your product <select id="bulkProduct-'+esc(id)+'">'+productsForOffer.filter(p=>p.status==='active'&&p.stock>0).map(p=>'<option value="'+esc(p.serverId)+'">'+esc(p.name)+' · '+esc(p.stock)+' '+esc(p.unit)+'</option>').join('')+'</select></label><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><input id="bulkOfferQty-'+esc(id)+'" type="number" min="0.1" step="0.1" placeholder="Quantity"><input id="bulkOfferPrice-'+esc(id)+'" type="number" min="0.01" step="0.01" placeholder="Price per unit"></div><button class="btn btn-primary" style="margin-top:9px" onclick="submitBulkOffer(\\''+esc(id)+'\\')">Send offer</button></div>';
+    host.innerHTML='<div class="bulk-offer-panel"><label>Choose your product <select id="bulkProduct-'+esc(id)+'">'+productsForOffer.filter(p=>p.status==='active'&&p.stock>0).map(p=>'<option value="'+esc(p.serverId)+'">'+esc(p.name)+' · '+esc(p.stock)+' '+esc(p.unit)+'</option>').join('')+'</select></label><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><input id="bulkOfferQty-'+esc(id)+'" type="number" min="0.1" step="0.1" placeholder="Quantity"><input id="bulkOfferPrice-'+esc(id)+'" type="number" min="0.01" step="0.01" placeholder="Price per unit"></div><button class="btn btn-primary" style="margin-top:9px" onclick="submitBulkOffer(&quot;'+esc(id)+'&quot;)">Send offer</button></div>';
   };
 
   window.submitBulkOffer=async function(id){
@@ -2831,7 +2834,7 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
     const host=$('bulkOffers-'+id);if(!host)return;
     try{
       const rows=await api()('/api/bulk-requests/'+encodeURIComponent(id)+'/offers');
-      host.innerHTML=rows.length?'<div class="bulk-offer-panel">'+rows.map(o=>'<div style="padding:8px 0;border-bottom:1px solid #e6eee7"><b>'+esc(o.farmer_name)+'</b><p>'+esc(o.offered_quantity)+' units at '+money(o.unit_price)+' per unit · '+esc(o.status)+'</p>'+(o.status==='pending'?'<button class="btn btn-primary" onclick="decideBulkOffer(\\''+esc(o.id)+'\\',\\'accepted\\')">Accept offer</button> <button class="btn btn-light" onclick="decideBulkOffer(\\''+esc(o.id)+'\\',\\'rejected\\')">Decline</button>':'')+'</div>').join('')+'</div>':'<div class="api-note">No offers yet.</div>';
+      host.innerHTML=rows.length?'<div class="bulk-offer-panel">'+rows.map(o=>'<div style="padding:8px 0;border-bottom:1px solid #e6eee7"><b>'+esc(o.farmer_name)+'</b><p>'+esc(o.offered_quantity)+' units at '+money(o.unit_price)+' per unit · '+esc(o.status)+'</p>'+(o.status==='pending'?'<button class="btn btn-primary" onclick="decideBulkOffer(&quot;'+esc(o.id)+'&quot;,&quot;accepted&quot;)">Accept offer</button> <button class="btn btn-light" onclick="decideBulkOffer(&quot;'+esc(o.id)+'&quot;,&quot;rejected&quot;)">Decline</button>':'')+'</div>').join('')+'</div>':'<div class="api-note">No offers yet.</div>';
     }catch(e){host.innerHTML='<div class="api-note">'+esc(e.message||'Could not load offers.')+'</div>';}
   };
 
@@ -2861,17 +2864,17 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
     }
     if(checkoutStep===2){
       if(!token()){
-        panel.innerHTML='<h3>Sign in to continue</h3><p class="small">Save your own delivery address to place an order.</p><button class="btn btn-primary" style="margin-top:12px" onclick="openAuthPortal(\\'customer\\')">Sign in as customer</button>';
+        panel.innerHTML='<h3>Sign in to continue</h3><p class="small">Save your own delivery address to place an order.</p><button class="btn btn-primary" style="margin-top:12px" onclick="openAuthPortal(&quot;customer&quot;)">Sign in as customer</button>';
         return;
       }
-      panel.innerHTML='<h3>Delivery address</h3><div class="address-grid">'+(addresses||[]).map((a,i)=>'<div class="address-card '+(i===selectedAddress?'sel':'')+'" onclick="selectedAddress='+i+';renderCheckout()"><b>📍 '+esc(a.label)+'</b><p class="small" style="margin-top:4px">'+esc(a.name)+' · '+esc(a.mobile)+'<br>'+esc(a.text)+', '+esc(a.city)+', '+esc(a.state)+' · '+esc(a.pin)+'</p></div>').join('')+'</div>'+(addresses.length?'':'<div class="api-note">You have not saved a delivery address yet.</div>')+'<button class="btn btn-light" style="margin-top:10px" onclick="openModal(\\'addressModal\\')">＋ Add delivery address</button><div class="modal-actions"><button class="btn btn-light" onclick="checkoutStep=1;renderCheckout()">← Back</button><button class="btn btn-primary" '+(addresses.length?'':'disabled')+' onclick="checkoutStep=3;renderCheckout()">Continue →</button></div>';
+      panel.innerHTML='<h3>Delivery address</h3><div class="address-grid">'+(addresses||[]).map((a,i)=>'<div class="address-card '+(i===selectedAddress?'sel':'')+'" onclick="selectedAddress='+i+';renderCheckout()"><b>📍 '+esc(a.label)+'</b><p class="small" style="margin-top:4px">'+esc(a.name)+' · '+esc(a.mobile)+'<br>'+esc(a.text)+', '+esc(a.city)+', '+esc(a.state)+' · '+esc(a.pin)+'</p></div>').join('')+'</div>'+(addresses.length?'':'<div class="api-note">You have not saved a delivery address yet.</div>')+'<button class="btn btn-light" style="margin-top:10px" onclick="openModal(&quot;addressModal&quot;)">＋ Add delivery address</button><div class="modal-actions"><button class="btn btn-light" onclick="checkoutStep=1;renderCheckout()">← Back</button><button class="btn btn-primary" '+(addresses.length?'':'disabled')+' onclick="checkoutStep=3;renderCheckout()">Continue →</button></div>';
       return;
     }
     if(checkoutStep===3){
       panel.innerHTML='<h3>Payment method</h3><div class="pay-option sel"><b>Cash on Delivery</b><span class="small" style="float:right">Available for pilot orders</span></div><div class="api-note">Online payments are not enabled yet. No payment is collected in this prototype. For COD, the collection status stays pending until it is confirmed separately.</div><div class="modal-actions"><button class="btn btn-light" onclick="checkoutStep=2;renderCheckout()">← Back</button><button class="btn btn-primary" onclick="placeOrder()">Place COD order →</button></div>';
       return;
     }
-    panel.innerHTML='<div style="text-align:center;padding:24px 10px"><div style="font-size:52px">✅</div><h2>Order sent to the farmer</h2><p class="small" style="margin-top:7px">Your order has been recorded. The farmer must confirm it before preparation begins.</p><div class="api-note" style="margin-top:15px">Order '+esc(window.ffLastOrderNumber||'')+' · Payment: Cash on Delivery · Collection pending</div><button class="btn btn-primary" style="margin-top:15px" onclick="showPage(\\'orders\\')">View my orders</button></div>';
+    panel.innerHTML='<div style="text-align:center;padding:24px 10px"><div style="font-size:52px">✅</div><h2>Order sent to the farmer</h2><p class="small" style="margin-top:7px">Your order has been recorded. The farmer must confirm it before preparation begins.</p><div class="api-note" style="margin-top:15px">Order '+esc(window.ffLastOrderNumber||'')+' · Payment: Cash on Delivery · Collection pending</div><button class="btn btn-primary" style="margin-top:15px" onclick="showPage(&quot;orders&quot;)">View my orders</button></div>';
   };
 
   window.placeOrder=async function(){
