@@ -1299,18 +1299,18 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
     return {id:'api-'+p.id,apiId:p.id,name:p.name,category:p.category,description:p.description||'',price:Number(p.price),market:Number(p.market_price),farmer:p.farmer||'Farmer',farmerId:String(p.farmer_id),emoji:'🌱',rating:Number(p.rating||0),distance:0,stock:Number(p.stock),organic:!!p.organic,fresh:p.harvest_date?'Recently harvested':'Available',verified:!!p.verified,harvest:0,delivery:p.delivery_minutes<180?'Today':'Tomorrow',hours:Math.max(1,Math.ceil(p.delivery_minutes/60)),image:p.image_url||'',unit:p.unit||'kg',location:p.location||'',serverId:p.id};
   }
   function mapCartRow(x){const p=products.find(pp=>pp.serverId===x.product_id)||mapProduct(x);return {...p,serverId:x.product_id,qty:Number(x.quantity)}}
-  function mapOrder(o){return {id:'#FF'+String(o.id).padStart(7,'0'),serverId:o.id,orderItems:(o.items||[]).map(i=>({productId:'api-'+i.product_id,name:i.name,farmerId:String(i.farmer_id),farmer:'Farmer',qty:Number(i.quantity),unit:'unit',price:Number(i.unit_price),market:Number(i.unit_price),image_url:i.image_url})),items:(o.items||[]).map(i=>`${i.name} ×${i.quantity}`).join(' + '),total:Number(o.total),subtotal:Number(o.subtotal),delivery:Number(o.delivery_fee),payment:o.payment_provider,status:({'pending_payment':'Payment pending','confirmed':'Confirmed','packed':'Preparing','out_for_delivery':'Out for Delivery','delivered':'Delivered','cancelled':'Cancelled','returned':'Returned'})[o.status]||o.status,eta:o.estimated_delivery?new Date(o.estimated_delivery).toLocaleString('en-IN'): 'To be scheduled',created:o.created_at?new Date(o.created_at).toLocaleString('en-IN'):'' ,stockRestored:false}}
+  function mapOrder(o){const names={pending_acceptance:'Order Placed',confirmed:'Confirmed',preparing:'Preparing',ready_for_pickup:'Ready for pickup',picked_up:'Picked Up',out_for_delivery:'Out for Delivery',delivered:'Delivered',cancelled:'Cancelled'};return {id:o.order_number||('#AN'+String(o.id||'').slice(0,8)),serverId:o.id,orderItems:(o.items||[]).map(i=>({productId:i.product_id?'api-'+i.product_id:null,name:i.product_name||i.name||'Produce',farmerId:String(i.farmer_id||o.farmer_id||''),farmer:'Farmer',qty:Number(i.quantity),unit:i.unit||'kg',price:Number(i.unit_price),market:Number(i.market_price||i.unit_price),image_url:i.image_url})),items:(o.items||[]).map(i=>`${i.product_name||i.name||'Produce'} ×${i.quantity}`).join(' + '),total:Number(o.total),subtotal:Number(o.subtotal),delivery:Number(o.delivery_fee),payment:o.payment_method||'cash_on_delivery',paymentStatus:o.payment_status,status:names[o.status]||o.status,eta:'To be scheduled by farmer',created:o.created_at?new Date(o.created_at).toLocaleString('en-IN'):'',address:o.delivery_address||{},stockRestored:false}}
   async function syncProducts(){
     const qs=new URLSearchParams({limit:'100'});
     const data=await api('/api/products?'+qs.toString());
-    if(Array.isArray(data) && data.length){products=data.map(mapProduct);storage.set('ff_products',products);renderHome();renderMarketplace();renderCategories();renderInventory();}
+    if(Array.isArray(data)){products=data.map(mapProduct);storage.set('ff_products',products);renderHome();renderMarketplace();renderCategories();renderInventory();}
     return data;
   }
   async function syncCart(){
     if(!token()) return;
     const rows=await api('/api/cart'); cart=rows.map(mapCartRow);persist();updateBadges();renderCart();if(document.getElementById('miniCartDrawer')?.classList.contains('show'))renderMiniCart();
   }
-  async function syncAddresses(){if(!token())return; let rows=await api('/api/addresses'); if(!rows.length){try{const created=await api('/api/addresses',{method:'POST',body:JSON.stringify({label:'Home',line1:'123 Green Valley Road',city:'Coimbatore',state:'Tamil Nadu',pincode:'641001'})});rows=[created];}catch(_){}} if(rows.length){addresses=rows.map(x=>({id:x.id,label:x.label,name:currentUser?.name||'',mobile:currentUser?.phone||'',text:x.line1,city:x.city,state:x.state,pin:x.pincode,lat:x.lat,lng:x.lng}));selectedAddress=0;persist();}}
+  async function syncAddresses(){if(!token())return; const rows=await api('/api/addresses'); addresses=(rows||[]).map(x=>({id:x.id,label:x.label,name:x.recipient_name||currentUser?.name||'',mobile:x.mobile||currentUser?.contact||'',text:x.line1,city:x.city,state:x.state,pin:x.pincode,landmark:x.landmark})); selectedAddress=Math.max(0,Math.min(selectedAddress,addresses.length-1)); persist();}
   async function syncOrders(){if(!token())return; const rows=await api('/api/orders'); orders=rows.map(mapOrder); if(!orders.length)orders=[]; persist(); renderOrders(); renderTracking();}
   async function syncNotifications(){if(!token())return; const rows=await api('/api/notifications'); notifications=rows.map(n=>({id:n.id,icon:n.type==='payment'?'💳':n.type==='order'?'📦':'🔔',title:n.title,text:n.message,unread:!n.read})); persistNotifications(); renderNotifications();}
   async function bootBackend(){
@@ -1421,7 +1421,8 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
     await Promise.allSettled([syncProducts(),syncCart(),syncAddresses(),syncOrders(),syncNotifications()]);
     if(role==='farmer'&&currentUser.farmerStatus!=='approved'){
       window.closeAuthPortal();
-      toast('Phone verified. Farmer account is pending admin approval before selling tools are enabled.');
+      showPage('farmer');
+      toast('Phone verified. Your farmer dashboard is available in review mode; publishing and order actions unlock after approval.');
       return;
     }
     window.closeAuthPortal();
@@ -1440,7 +1441,7 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
     if(currentUser&&token()){
       document.getElementById('authAccountName').textContent=currentUser.name||'AgriNex user';
       document.getElementById('authAccountRole').textContent=(currentUser.role==='farmer'?'Farmer account':'Customer account')+' · '+(currentUser.contact||'')+(currentUser.role==='farmer'&&currentUser.farmerStatus!=='approved'?' · Pending approval':'');
-      const dash=document.getElementById('authAccountDashboard');if(dash)dash.hidden=currentUser.role!=='farmer'||currentUser.farmerStatus!=='approved';
+      const dash=document.getElementById('authAccountDashboard');if(dash)dash.hidden=currentUser.role!=='farmer';
       authSetView('authAccountPage');
       if(role==='farmer'&&currentUser.role!=='farmer')toast('This signed-in account is not registered as a farmer. Sign out to switch accounts.');
       return;
@@ -1564,13 +1565,23 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
   window.authSignOutAndSwitch=function(){window.logoutDemo();window.openAuthPortal('choose');};
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('authPortal')?.classList.contains('show'))window.closeAuthPortal();});
   const originalShowPage=window.showPage; window.showPage=function(id){
-    if((id==='farmer'||id==='inventory')&&(!currentUser||!token()||currentUser.role!=='farmer'||currentUser.farmerStatus!=='approved')){
-      if(currentUser&&token()&&currentUser.role==='farmer'&&currentUser.farmerStatus!=='approved')toast('Farmer verification is pending admin approval.');
-      else if(currentUser&&token()&&currentUser.role!=='farmer')toast('Farmer tools are restricted to farmer accounts.');
+    if(id==='farmer'&&(!currentUser||!token()||currentUser.role!=='farmer')){
+      if(currentUser&&token())toast('Farmer tools are restricted to farmer accounts.');
       else{window.openAuthPortal('farmer');toast('Sign in with a farmer account to continue.');}
       return;
     }
-    originalShowPage(id);if(id==='orders'&&token())syncOrders();if(id==='notifications'&&token())syncNotifications();if(id==='inventory'&&token())syncProducts();
+    if(id==='inventory'&&(!currentUser||!token()||currentUser.role!=='farmer'||currentUser.farmerStatus!=='approved')){
+      if(currentUser&&token()&&currentUser.role==='farmer')toast('Inventory publishing unlocks after farmer verification.');
+      else if(currentUser&&token())toast('Farmer tools are restricted to farmer accounts.');
+      else window.openAuthPortal('farmer');
+      return;
+    }
+    originalShowPage(id);
+    if(id==='orders'&&token())syncOrders();
+    if(id==='notifications'&&token())syncNotifications();
+    if(id==='inventory'&&token())window.loadFarmerInventory?.();
+    if(id==='farmer'&&token())window.loadFarmerDashboard?.();
+    if(id==='bulkMarketplace'&&token())window.loadBulkMarketplace?.();
   };
   window.addEventListener('online',bootBackend);
   setTimeout(async()=>{await bootBackend();await connectSocket()},250);
