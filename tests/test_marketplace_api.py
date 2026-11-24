@@ -176,6 +176,7 @@ class MarketplaceApiContractTests(unittest.TestCase):
             "SHIPROCKET_API_EMAIL": "",
             "SHIPROCKET_API_PASSWORD": "",
             "SUPABASE_PHONE_SMS_CONFIGURED": "false",
+            "DATA_GOV_IN_API_KEY": "",
         }):
             response = self.client.get("/api/marketplace/health")
         self.assertEqual(response.status_code, 200)
@@ -185,6 +186,29 @@ class MarketplaceApiContractTests(unittest.TestCase):
         self.assertFalse(body["shiprocket_configured"])
         self.assertFalse(body["sms_provider_configured"])
         self.assertFalse(body["automatic_payouts_enabled"])
+
+    def test_admin_and_logistics_endpoints_require_authentication(self):
+        order_id = "00000000-0000-0000-0000-000000000001"
+        routes = (
+            ("/api/admin/market-prices/sync?state=Tamil%20Nadu", "GET", None),
+            (f"/api/admin/orders/{order_id}/cod-collected", "POST", None),
+            (f"/api/orders/{order_id}/shipment", "GET", None),
+            (f"/api/orders/{order_id}/shipment", "POST", {
+                "length_cm": 20, "breadth_cm": 15, "height_cm": 10,
+                "weight_kg": 1, "strategy": "cheapest",
+            }),
+        )
+        for path, method, payload in routes:
+            with self.subTest(path=path, method=method):
+                response = self.client.request(method, path, json=payload)
+                self.assertEqual(response.status_code, 401)
+
+    def test_provider_secrets_are_not_embedded_in_frontend(self):
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn("SUPABASE_SERVICE_ROLE_KEY", response.text)
+        self.assertNotIn("WHATSAPP_ACCESS_TOKEN", response.text)
+        self.assertNotIn("RAZORPAY_KEY_SECRET", response.text)
 
     def test_frontend_contains_farmer_first_marketplace_surfaces(self):
         response = self.client.get("/")
@@ -202,7 +226,10 @@ class MarketplaceApiContractTests(unittest.TestCase):
             "saveWhatsAppPreferences",
             "loadFarmerEvidence",
             "importVerifiedMarketPrices",
+            "syncDailyMandiPrices",
+            "saveWhatsAppPreferences",
             "Razorpay · Test mode",
+            "Farm Data Assistant",
             "Tamil",
         ):
             with self.subTest(marker=marker):
