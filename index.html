@@ -921,7 +921,7 @@
 
   </main>
 
-  <nav class="mobile-nav"><button data-page="home" onclick="showPage('home')"><b>🏠</b>Home</button><button data-page="marketplace" onclick="showPage('marketplace')"><b>🔎</b>Shop</button><button data-page="cart" onclick="showPage('cart')"><b>🛒</b>Cart</button><button data-page="orders" onclick="showPage('orders')"><b>📦</b>Orders</button><button data-page="ai" onclick="showPage('ai')"><b>🤖</b>AI</button></nav>
+  <nav class="mobile-nav"><button data-page="home" onclick="showPage('home')"><b>🏠</b>Home</button><button data-page="marketplace" onclick="showPage('marketplace')"><b>🔎</b>Shop</button><button data-page="bulkMarketplace" onclick="showPage('bulkMarketplace')"><b>📦</b>Bulk</button><button data-page="cart" onclick="showPage('cart')"><b>🛒</b>Cart</button><button data-page="orders" onclick="showPage('orders')"><b>📋</b>Orders</button></nav>
   <footer class="footer"><div class="footer-grid"><div><h3>AgriNex</h3><p>A direct farm-to-family marketplace built around simple shopping, transparent pricing, farmer trust and useful farm tools.</p><small>© 2026 AgriNex • Upgradable single-file prototype</small></div><div><h3>Shop</h3><button onclick="showPage('marketplace')">Marketplace</button><button onclick="showPage('wishlist')">Wishlist</button><button onclick="showPage('orders')">Orders</button><button onclick="showPage('farmers')">Farmers near me</button></div><div><h3>Farmers</h3><button onclick="showPage('farmer')">Dashboard</button><button onclick="showPage('inventory')">Inventory</button><button onclick="showPage('ai')">Farm AI</button></div><div><h3>Platform</h3><button onclick="toast('Tamil interface is planned for the next release')">🌐 Language: English</button><button onclick="useMyLocation()">📍 Use my location</button><button onclick="toast('Production support can connect to WhatsApp/helpdesk API')">Help center</button></div></div></footer>
 </div>
 
@@ -2281,6 +2281,636 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
  }
  window.addEventListener("popstate",restoreProductRoute);
  if(location.hash.startsWith("#product/")) restoreProductRoute();
+})();
+</script>
+
+
+<script id="agrinex-farmer-functional-layer">
+(function(){
+  'use strict';
+  const $=id=>document.getElementById(id);
+  const api=path=>window.ffApi?.api;
+  const token=()=>window.ffApi?.token?.()||'';
+  const isFarmer=()=>Boolean(currentUser&&token()&&currentUser.role==='farmer');
+  const isCustomer=()=>Boolean(currentUser&&token()&&currentUser.role==='customer');
+  const money=n=>'₹'+Number(n||0).toLocaleString('en-IN',{maximumFractionDigits:2});
+  const esc=v=>typeof safe==='function'?safe(v):String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  window.ffFarmerProducts=[];
+  window.ffFarmerOrders=[];
+  window.ffFarmerSummary=null;
+  window.ffFarmerEarnings=[];
+  let farmerLanguage=localStorage.getItem('ff_farmer_language')||'en';
+  const DRAFT_KEY='agrinex_farmer_offline_drafts_v1';
+
+  function productMap(p){
+    return {
+      id:'api-'+p.id,serverId:p.id,apiId:p.id,name:p.name,category:p.category,
+      description:p.description||'',variety:p.variety||'',grade:p.grade||'',
+      price:Number(p.price||0),market:Number(p.market_price||p.price||0),
+      farmer:p.farmer||p.farmer_name||'Farmer',farmName:p.farm||p.farmer_farm_name||'',
+      farmerId:String(p.farmer_id||''),rating:null,distance:'—',
+      stock:Number(p.stock||0),organic:!!p.organic,fresh:p.harvest_date||'Available',
+      verified:!!p.verified,harvest:0,delivery:Number(p.delivery_minutes||0)<180?'Today':'To be scheduled',
+      hours:Math.max(1,Math.ceil(Number(p.delivery_minutes||0)/60)),
+      image:p.image_url||'',unit:p.unit||'kg',location:p.district||p.village||'',
+      pincode:p.pincode||'',harvestDate:p.harvest_date||'',availableUntil:p.available_until||'',
+      status:p.status||'draft',pickupAvailable:p.pickup_available!==false,
+      deliveryAvailable:!!p.delivery_available,deliveryNotes:p.delivery_notes||''
+    };
+  }
+
+  function mapDbOrder(o){
+    const statusNames={pending_acceptance:'Order placed',confirmed:'Confirmed',preparing:'Preparing',ready_for_pickup:'Ready for pickup',picked_up:'Picked up',out_for_delivery:'Out for delivery',delivered:'Delivered',cancelled:'Cancelled'};
+    const items=o.items||[];
+    return {
+      id:o.order_number||('AN-'+String(o.id||'').slice(0,8)),
+      serverId:o.id,
+      status:statusNames[o.status]||o.status||'Order placed',
+      rawStatus:o.status,
+      orderItems:items.map(i=>({productId:i.product_id?'api-'+i.product_id:null,name:i.product_name||'Produce',farmerId:i.farmer_id||o.farmer_id,farmer:'Farmer',qty:Number(i.quantity||0),unit:i.unit||'kg',price:Number(i.unit_price||0),market:Number(i.market_price||i.unit_price||0)})),
+      items:items.map(i=>(i.product_name||'Produce')+' ×'+i.quantity).join(' + '),
+      total:Number(o.total||0),subtotal:Number(o.subtotal||0),delivery:Number(o.delivery_fee||0),
+      payment:o.payment_method||'cash_on_delivery',paymentStatus:o.payment_status||'pending_collection',
+      address:o.delivery_address||{},created:o.created_at?new Date(o.created_at).toLocaleString('en-IN'):'',
+      eta:'To be scheduled by farmer'
+    };
+  }
+
+  async function loadPublicProducts(){
+    if(!token()&& !window.ffApi) return [];
+    const rows=await api()('/api/products?limit=200');
+    const mapped=(rows||[]).map(productMap);
+    products=mapped;
+    storage.set('ff_products',products);
+    renderHome();renderMarketplace();renderCategories();renderFarmers();
+    return mapped;
+  }
+
+  async function loadFarmerInventory(){
+    if(!isFarmer())return [];
+    const rows=await api()('/api/farmer/products');
+    window.ffFarmerProducts=(rows||[]).map(productMap);
+    renderInventory();
+    renderFarmer();
+    return window.ffFarmerProducts;
+  }
+  window.loadFarmerInventory=loadFarmerInventory;
+
+  async function loadFarmerDashboard(){
+    if(!isFarmer())return;
+    try{
+      const results=await Promise.all([
+        api()('/api/farmer/summary'),
+        api()('/api/farmer/orders'),
+        api()('/api/farmer/earnings'),
+        api()('/api/farmer/products'),
+        api()('/api/profile')
+      ]);
+      window.ffFarmerSummary=results[0]||{};
+      window.ffFarmerOrders=(results[1]||[]).map(mapDbOrder);
+      window.ffFarmerEarnings=results[2]||[];
+      window.ffFarmerProducts=(results[3]||[]).map(productMap);
+      const profile=results[4]||{};
+      currentUser.farmerStatus=profile.farmer_status||currentUser.farmerStatus||'pending';
+      currentUser.name=profile.full_name||currentUser.name;
+      currentUser.preferredLanguage=profile.preferred_language||'en';
+      currentUser.farmName=profile.farm_name||'';
+      storage.set('ff_user',currentUser);
+      if(profile.preferred_language){
+        farmerLanguage=profile.preferred_language;
+        localStorage.setItem('ff_farmer_language',farmerLanguage);
+      }
+      renderFarmer();renderInventory();renderFarmerOrdersTable();applyFarmerLanguage();
+    }catch(e){
+      const panel=$('farmerStatusPanel');
+      if(panel)panel.innerHTML='<div class="farmer-status-card pending"><div><strong>Dashboard could not sync</strong><p>'+esc(e.message||'Check your connection and try again.')+'</p></div></div>';
+    }
+  }
+  window.loadFarmerDashboard=loadFarmerDashboard;
+
+  function renderFarmerStatus(){
+    const panel=$('farmerStatusPanel');if(!panel)return;
+    const status=currentUser?.farmerStatus||'pending';
+    const data={
+      pending:['pending','Application under review','Your farm details have been saved. An AgriNex administrator must review your farmer profile before active listings and buyer order actions unlock. You can prepare local drafts meanwhile.'],
+      approved:['approved','Farmer account approved','Your account is approved. You can publish produce, manage inventory, submit bulk offers and process buyer orders.'],
+      rejected:['rejected','More information required','Your application needs attention. Update the farm details and submit them again for review.']
+    }[status]||['pending','Verification status unavailable','Refresh your profile to check the latest status.'];
+    panel.innerHTML='<div class="farmer-status-card '+data[0]+'"><div><strong>'+esc(data[1])+'</strong><p>'+esc(data[2])+'</p></div><span class="status-pill">'+esc(status.replace('_',' ').toUpperCase())+'</span></div>';
+  }
+
+  window.renderFarmer=function(){
+    renderFarmerStatus();
+    const summary=window.ffFarmerSummary;
+    const ready=Boolean(summary);
+    const revenue=ready?Number(summary.completed_order_value||0):null;
+    const live=ready?Number(summary.active_product_count||0):null;
+    const pending=ready?Number(summary.pending_order_count||0):null;
+    const payouts=(window.ffFarmerEarnings||[]).reduce((a,x)=>a+Number(x.unsettled_amount||0),0);
+    if($('farmerRevenue'))$('farmerRevenue').textContent=ready?money(revenue):'—';
+    if($('farmerSold'))$('farmerSold').textContent=ready?String(live):'—';
+    if($('farmerPending'))$('farmerPending').textContent=ready?String(pending):'—';
+    if($('farmerWallet'))$('farmerWallet').textContent=ready?money(payouts):'—';
+    if($('simpleTodayRevenue'))$('simpleTodayRevenue').textContent=ready?money(revenue):'—';
+    if($('simplePendingOrders'))$('simplePendingOrders').textContent=ready?String(pending):'—';
+    if($('simpleLiveProducts'))$('simpleLiveProducts').textContent=ready?String(live):'—';
+    const health=$('apiHealth');if(health)health.textContent=ready?'● Live marketplace data':'● Not synced';
+    const alerts=$('farmerAlerts');
+    if(alerts){
+      const low=(window.ffFarmerProducts||[]).filter(p=>p.stock>0&&p.stock<=20);
+      const messages=[];
+      if(status==='pending')messages.push('Your profile is waiting for administrator approval.');
+      if(status==='rejected')messages.push('Update your farm details and resubmit for review.');
+      if(low.length)messages.push(low.length+' product(s) have low stock: '+low.map(p=>p.name).join(', '));
+      if(ready&&pending)messages.push(pending+' order(s) need your attention.');
+      alerts.innerHTML=messages.length?messages.map(x=>'<div class="alertbox">'+esc(x)+'</div>').join(''):'<div class="api-note">No urgent actions from your live listings and orders.</div>';
+    }
+    renderSalesChart();
+    renderFarmerOrdersTable();
+  };
+
+  window.renderInventory=function(){
+    const t=$('inventoryTable');if(!t)return;
+    if(!isFarmer()){
+      t.innerHTML='<tr><td colspan="6">Sign in with an approved farmer account to manage inventory.</td></tr>';return;
+    }
+    const list=window.ffFarmerProducts||[];
+    if(!list.length){
+      t.innerHTML='<tr><td colspan="6" class="small">No saved products yet. Add a listing to start your catalogue.</td></tr>';return;
+    }
+    t.innerHTML=list.map(p=>{
+      const status=p.status==='active'?'Live':p.status==='draft'?'Draft':p.status==='paused'?'Paused':p.status;
+      const statusClass=p.status==='active'?'ok':p.status==='draft'?'warn':'bad';
+      const id=esc(p.serverId);
+      return '<tr><td>'+esc(p.name)+'<br><small>'+esc(p.category)+' · '+esc(p.variety||'')+'</small></td><td>'+money(p.price)+'/'+esc(p.unit)+'</td><td>'+esc(p.stock)+'</td><td><span class="status '+statusClass+'">'+esc(status)+'</span></td><td>'+money(Math.max(0,Number(p.price||0)*0.99))+' <small>gross estimate before any confirmed charges</small></td><td><button class="btn btn-light" style="padding:6px 8px;font-size:8px" onclick="restockById(\''+id+'\')">Edit stock</button> <button class="btn btn-soft" style="padding:6px 8px;font-size:8px" onclick="editProductById(\''+id+'\')">Edit</button> <button class="btn btn-danger" style="padding:6px 8px;font-size:8px" onclick="deleteProductById(\''+id+'\')">Delete</button></td></tr>';
+    }).join('');
+  };
+
+  window.renderFarmerOrdersTable=function(){
+    const box=$('farmerOrdersTable');if(!box)return;
+    const rows=window.ffFarmerOrders||[];
+    if(!rows.length){
+      box.innerHTML='<tr><td colspan="6" class="small">No buyer orders yet. New customer and bulk-order requests will appear here when received.</td></tr>';return;
+    }
+    const next={
+      pending_acceptance:['confirmed','Accept'],
+      confirmed:['preparing','Start preparing'],
+      preparing:['ready_for_pickup','Mark ready'],
+      ready_for_pickup:['picked_up','Confirm pickup'],
+      picked_up:['out_for_delivery','Start delivery'],
+      out_for_delivery:['delivered','Mark delivered']
+    };
+    box.innerHTML=rows.map(o=>{
+      const step=next[o.rawStatus];
+      const customer=o.address?.recipient_name||'Customer';
+      const action=step?'<button class="btn btn-primary" style="padding:6px 8px;font-size:8px" onclick="advanceFarmerOrder(\''+esc(o.serverId)+'\',\''+step[0]+'\')">'+esc(step[1])+'</button>':'<span class="small">'+esc(o.rawStatus||o.status)+'</span>';
+      return '<tr><td>'+esc(o.id)+'</td><td>'+esc(customer)+'</td><td>'+esc(o.items||'Produce')+'</td><td>'+money(o.total)+'</td><td><span class="status '+(o.rawStatus==='delivered'?'ok':'warn')+'">'+esc(o.status)+'</span></td><td>'+action+'</td></tr>';
+    }).join('');
+  };
+
+  window.advanceFarmerOrder=async function(orderId,nextStatus){
+    if(!isFarmer())return;
+    try{
+      await api()('/api/orders/'+encodeURIComponent(orderId)+'/status',{method:'POST',body:JSON.stringify({status:nextStatus})});
+      await loadFarmerDashboard();
+      toast('Order status updated.');
+    }catch(e){toast(e.message||'Could not update the order.');}
+  };
+
+  function farmerProductBody(p,stockOverride){
+    return {
+      name:p.name,description:p.description||'',category:p.category,
+      variety:p.variety||null,grade:p.grade||null,
+      price:Number(p.price),market_price:Number(p.market_price??p.market??p.price),
+      stock:stockOverride===undefined?Number(p.stock||0):Number(stockOverride),
+      unit:p.unit||'kg',harvest_date:p.harvest_date||p.harvestDate||null,
+      available_until:p.available_until||p.availableUntil||null,
+      organic:!!p.organic,village:p.village||p.location||null,
+      district:p.district||null,pincode:p.pincode||null,
+      delivery_minutes:Number(p.delivery_minutes||p.hours*60||0),
+      pickup_available:p.pickup_available!==false,
+      delivery_available:!!p.delivery_available,
+      delivery_notes:p.delivery_notes||''
+    };
+  }
+
+  window.restockById=async function(id){
+    const p=(window.ffFarmerProducts||[]).find(x=>String(x.serverId)===String(id));if(!p)return;
+    const value=prompt('Enter the new available quantity in '+(p.unit||'kg'),String(p.stock));
+    if(value===null)return;
+    const q=Number(value);if(!Number.isFinite(q)||q<0){toast('Enter a valid quantity.');return;}
+    try{
+      const body=farmerProductBody(p,q);
+      await api()('/api/products/'+encodeURIComponent(id),{method:'PATCH',body:JSON.stringify(body)});
+      await loadFarmerInventory();toast('Inventory updated.');
+    }catch(e){toast(e.message||'Inventory update failed.');}
+  };
+
+  window.editProductById=async function(id){
+    const p=(window.ffFarmerProducts||[]).find(x=>String(x.serverId)===String(id));if(!p)return;
+    const name=prompt('Product name',p.name);if(name===null)return;
+    const price=Number(prompt('Selling price per '+p.unit,p.price));
+    const market=Number(prompt('Market reference price per '+p.unit,p.market));
+    if(!name.trim()||!Number.isFinite(price)||price<=0||!Number.isFinite(market)||market<price){toast('Enter a valid name and prices. Market reference must be at least the selling price.');return;}
+    const body=farmerProductBody({...p,name:name.trim(),price,market_price:market});
+    try{await api()('/api/products/'+encodeURIComponent(id),{method:'PATCH',body:JSON.stringify(body)});await loadFarmerInventory();toast('Product updated.');}
+    catch(e){toast(e.message||'Product update failed.');}
+  };
+
+  window.deleteProductById=async function(id){
+    const p=(window.ffFarmerProducts||[]).find(x=>String(x.serverId)===String(id));if(!p)return;
+    if(!confirm('Delete '+p.name+' from your listings?'))return;
+    try{await api()('/api/products/'+encodeURIComponent(id),{method:'DELETE'});await loadFarmerInventory();await loadPublicProducts();toast('Product deleted.');}
+    catch(e){toast(e.message||'Product could not be deleted.');}
+  };
+
+  window.renderSalesChart=function(){
+    const box=$('salesChart');if(!box)return;
+    const rows=window.ffFarmerEarnings||[];
+    if(!rows.length){box.innerHTML='<div class="small" style="padding:22px">Your sales trend will appear after real orders are completed.</div>';return;}
+    const last=rows.slice(0,7).reverse();
+    box.innerHTML='<div class="farmer-earnings-grid">'+last.map(x=>'<div class="farmer-earnings-stat"><span>'+esc(x.earning_date)+'</span><strong>'+money(x.gross_sales)+'</strong></div>').join('')+'</div>';
+  };
+
+  function renderFarmerEarnings(){
+    const host=$('farmerOrdersTable')?.closest('section')?.querySelector('.farmer-earnings-panel');
+    const rows=window.ffFarmerEarnings||[];
+    const sums=rows.reduce((a,x)=>({gross:a.gross+Number(x.gross_sales||0),fee:a.fee+Number(x.platform_fees||0),delivery:a.delivery+Number(x.delivery_fees||0),payout:a.payout+Number(x.estimated_farmer_payout||0),settled:a.settled+Number(x.settled_amount||0),unsettled:a.unsettled+Number(x.unsettled_amount||0)}),{gross:0,fee:0,delivery:0,payout:0,settled:0,unsettled:0});
+    const panel=document.getElementById('farmerEarningsPanel');
+    if(!panel)return;
+    panel.innerHTML='<h3>💰 Earnings transparency</h3><p class="small">Based on completed order items in AgriNex. This is a ledger estimate, not a bank or UPI confirmation.</p><div class="farmer-earnings-grid"><div class="farmer-earnings-stat"><span>Gross completed sales</span><strong>'+money(sums.gross)+'</strong></div><div class="farmer-earnings-stat"><span>Estimated farmer payout</span><strong>'+money(sums.payout)+'</strong></div><div class="farmer-earnings-stat"><span>Awaiting collection / settlement</span><strong>'+money(sums.unsettled)+'</strong></div></div><p class="farmer-earnings-note">Settled amount recorded: '+money(sums.settled)+'. AgriNex does not currently transfer or reconcile payouts automatically.</p>';
+  }
+
+  const baseRenderFarmer=window.renderFarmer;
+  const _unused=baseRenderFarmer;
+  const farmerMarkup=document.getElementById('farmer');
+  if(farmerMarkup&&!document.getElementById('farmerEarningsPanel')){
+    const node=document.createElement('div');node.id='farmerEarningsPanel';node.className='farmer-earnings-panel';
+    const before=farmerMarkup.querySelector('.section-head');
+    if(before)before.parentNode.insertBefore(node,before.nextSibling);
+    const tableHead=Array.from(farmerMarkup.querySelectorAll('.section-head')).find(x=>x.textContent.includes('Buyer orders'));
+    if(tableHead)tableHead.parentNode.insertBefore(node.cloneNode(false),tableHead);
+    const panels=farmerMarkup.querySelectorAll('#farmerEarningsPanel');
+    if(panels.length>1)panels[1].remove();
+  }
+
+  const originalDashboard=window.renderFarmer;
+  window.renderFarmer=function(){
+    originalDashboard?.();
+    renderFarmerStatus();
+    renderFarmerEarnings();
+  };
+
+  async function createListingFromForm(){
+    if(!isFarmer()){
+      if(typeof window.openAuthPortal==='function')window.openAuthPortal('farmer');
+      toast('Sign in with your farmer account to save a listing.');return;
+    }
+    const name=$('newName')?.value.trim()||'';
+    const price=Number($('newPrice')?.value);
+    const market=Number($('newMarket')?.value)||price;
+    const stock=Number($('newStock')?.value);
+    const category=$('newCategory')?.value||'Vegetables';
+    const unit=$('newUnit')?.value||'kg';
+    if(name.length<2||!Number.isFinite(price)||price<=0||!Number.isFinite(stock)||stock<0||market<price){
+      toast('Enter a product name, valid price and quantity. Market reference must be at least the selling price.');return;
+    }
+    const file=$('newImageFile')?.files?.[0]||null;
+    if(file&&(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>5*1024*1024)){
+      toast('Choose a JPG, PNG or WEBP photo smaller than 5 MB.');return;
+    }
+    const body={
+      name,description:$('newDescription')?.value.trim()||'',category,
+      variety:$('newVariety')?.value.trim()||null,grade:$('newGrade')?.value||null,
+      price,market_price:market,stock,unit,
+      harvest_date:$('newHarvestDate')?.value||null,
+      available_until:$('newAvailableUntil')?.value||null,
+      organic:Boolean($('newOrganic')?.checked),
+      village:$('newVillage')?.value.trim()||null,
+      district:$('newDistrict')?.value.trim()||null,
+      pincode:$('newPincode')?.value.trim()||null,
+      delivery_minutes:Number($('newDeliveryMinutes')?.value||120),
+      pickup_available:true,delivery_available:false,delivery_notes:null
+    };
+    const btn=document.querySelector('#productModal .btn-primary');
+    if(btn){btn.disabled=true;btn.textContent='Saving listing…';}
+    try{
+      if(file){
+        const dataUrl=await new Promise((resolve,reject)=>{
+          const reader=new FileReader();reader.onload=()=>resolve(String(reader.result||''));reader.onerror=()=>reject(new Error('Could not read the photo.'));reader.readAsDataURL(file);
+        });
+        body.image_base64=dataUrl.split(',')[1]||'';
+        body.image_mime_type=file.type;
+        body.image_filename=file.name;
+      }
+      const result=await api()('/api/products',{method:'POST',body:JSON.stringify(body)});
+      closeModals();
+      $('productModal').querySelectorAll('input,textarea').forEach(x=>{if(x.type==='checkbox')x.checked=false;else if(x.type!=='file')x.value='';});
+      if($('newImagePreview'))$('newImagePreview').textContent='No photo selected yet.';
+      await Promise.all([loadFarmerInventory(),loadPublicProducts(),loadFarmerDashboard()]);
+      if(result.published)toast(name+' is now listed in the AgriNex marketplace.');
+      else toast(name+' was saved as a draft. Admin approval is required before customers can see it.');
+    }catch(e){
+      if(/Failed to fetch|NetworkError|fetch/i.test(e.message||'')){
+        const draft={id:'draft-'+Date.now(),saved_at:new Date().toISOString(),payload:body,needs_photo:Boolean(file),photo_not_saved:Boolean(file)};
+        try{
+          const existing=JSON.parse(localStorage.getItem(DRAFT_KEY)||'[]');existing.push(draft);localStorage.setItem(DRAFT_KEY,JSON.stringify(existing));
+          closeModals();toast('Connection unavailable. A text-only draft was saved on this device. Re-select its photo before syncing.');
+        }catch(_){toast('Offline storage is full. Keep the form open and retry when connected.');}
+      }else toast(e.message||'Could not save this listing.');
+    }finally{if(btn){btn.disabled=false;btn.textContent='Publish product';}}
+  }
+  window.addProduct=createListingFromForm;
+
+  window.previewNewProductImage=function(event){
+    const file=event.target?.files?.[0];const host=$('newImagePreview');if(!host)return;
+    if(!file){host.textContent='No photo selected yet.';return;}
+    if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>5*1024*1024){event.target.value='';host.textContent='Choose JPG, PNG or WEBP smaller than 5 MB.';return;}
+    const url=URL.createObjectURL(file);host.innerHTML='<img alt="Selected produce photo preview" src="'+url+'"><span>'+esc(file.name)+'</span>';
+  };
+
+  window.syncFarmerOfflineDrafts=async function(){
+    if(!isFarmer()){toast('Sign in to your farmer account before syncing drafts.');return;}
+    let drafts=[];try{drafts=JSON.parse(localStorage.getItem(DRAFT_KEY)||'[]');}catch(_){}
+    if(!drafts.length){toast('No offline farmer drafts to sync.');return;}
+    let synced=0,remaining=[];
+    for(const d of drafts){
+      try{
+        const result=await api()('/api/products',{method:'POST',body:JSON.stringify(d.payload)});
+        synced++;
+        if(result.published)continue;
+      }catch(e){remaining.push(d);remaining.push(...drafts.slice(synced+remaining.length));break;}
+    }
+    localStorage.setItem(DRAFT_KEY,JSON.stringify(remaining));
+    await Promise.all([loadFarmerInventory(),loadPublicProducts(),loadFarmerDashboard()]);
+    toast(synced+' draft(s) synced. '+remaining.length+' remain on this device.');
+  };
+
+  window.openVoiceSell=function(){
+    if(!isFarmer()){window.openAuthPortal?.('farmer');return;}
+    openModal('productModal');
+    const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+    if(!Recognition){toast('Voice input is not supported in this browser. Use the product form or camera button.');return;}
+    const rec=new Recognition();
+    rec.lang=farmerLanguage==='ta'?'ta-IN':'en-IN';
+    rec.interimResults=false;rec.maxAlternatives=1;
+    rec.onresult=function(event){
+      const phrase=event.results?.[0]?.[0]?.transcript||'';
+      if($('newName'))$('newName').value=phrase.trim();
+      toast('Voice captured. Check the product name and enter price and quantity before saving.');
+    };
+    rec.onerror=function(){toast('Voice input stopped. You can continue by typing.');};
+    rec.onend=function(){window.ffCurrentRecognition=null;};
+    window.ffCurrentRecognition=rec;
+    try{rec.start();toast(farmerLanguage==='ta'?'தமிழில் விளைபொருள் பெயரைச் சொல்லுங்கள்.':'Say the produce name clearly.');}
+    catch(_){toast('Voice input is already active.');}
+  };
+
+  window.openCameraSell=function(){
+    if(!isFarmer()){window.openAuthPortal?.('farmer');return;}
+    openModal('productModal');
+    setTimeout(()=>$('newImageFile')?.click(),150);
+  };
+
+  window.speakFarmerSummary=function(){
+    if(!('speechSynthesis' in window)){toast('Audio playback is not supported in this browser.');return;}
+    const s=window.ffFarmerSummary||{};
+    const text=farmerLanguage==='ta'
+      ? 'அக்ரிநெக்ஸ் விவசாயி கணக்கு. செயலில் உள்ள பொருட்கள் '+Number(s.active_product_count||0)+'. நிலுவை ஆர்டர்கள் '+Number(s.pending_order_count||0)+'. நிறைவு செய்யப்பட்ட ஆர்டர் மதிப்பு ரூபாய் '+Number(s.completed_order_value||0)+'.'
+      : 'AgriNex farmer summary. Active products: '+Number(s.active_product_count||0)+'. Pending orders: '+Number(s.pending_order_count||0)+'. Completed order value: rupees '+Number(s.completed_order_value||0)+'.';
+    const utterance=new SpeechSynthesisUtterance(text);utterance.lang=farmerLanguage==='ta'?'ta-IN':'en-IN';
+    speechSynthesis.cancel();speechSynthesis.speak(utterance);
+  };
+
+  window.checkApiHealth=async function(){
+    try{const d=await api()('/api/health');if($('apiHealth'))$('apiHealth').textContent=d.marketplace_configured?'● Live backend':'● Backend configuration incomplete';toast('Backend status: '+(d.marketplace_configured?'connected':'configuration incomplete'));}
+    catch(e){if($('apiHealth'))$('apiHealth').textContent='● Offline';toast(e.message||'Backend is not reachable.');}
+  };
+
+  window.submitFarmer=async function(){
+    if(!isFarmer()){window.openAuthPortal?.('farmer');return;}
+    const name=$('farmName')?.value.trim()||currentUser.name||'';
+    const farm=$('farmBusiness')?.value.trim()||currentUser.farmName||'';
+    const pin=$('farmPin')?.value.trim()||'';
+    if(name.length<2||farm.length<2||!/^[0-9]{6}$/.test(pin)){toast('Enter farmer name, farm name and a valid 6-digit pincode.');return;}
+    const body={
+      full_name:name,farm_name:farm,
+      farm_village:$('farmVillage')?.value.trim()||null,
+      farm_district:$('farmDistrict')?.value.trim()||null,
+      farm_pincode:pin,
+      farm_address:$('farmAddress')?.value.trim()||null,
+      farm_type:$('farmType')?.value||null,
+      farm_description:$('farmDescription')?.value.trim()||null,
+      preferred_language:$('farmLanguage')?.value||farmerLanguage
+    };
+    const button=$('#farmerModal .btn-primary');
+    try{
+      if(button){button.disabled=true;button.textContent='Submitting…';}
+      await api()('/api/farmer/verification',{method:'POST',body:JSON.stringify(body)});
+      currentUser.name=name;currentUser.farmName=farm;storage.set('ff_user',currentUser);
+      closeModals();await loadFarmerDashboard();
+      toast('Farm details submitted for administrator review.');
+    }catch(e){toast(e.message||'Farm details were not saved.');}
+    finally{if(button){button.disabled=false;button.textContent='Save & submit for review';}}
+  };
+
+  const taText={
+    'Farmer dashboard':'விவசாயி டாஷ்போர்டு',
+    'Manage harvest, buyer orders, inventory and actual earnings.':'அறுவடை, வாங்குபவர் ஆர்டர்கள், இருப்பு மற்றும் வருமானத்தை நிர்வகிக்கவும்.',
+    '🌾 Easy Farmer Mode':'🌾 எளிய விவசாயி முறை',
+    'Large controls, optional voice help and photo-assisted listing. Always review details before publishing.':'பெரிய பொத்தான்கள், குரல் உதவி மற்றும் புகைப்பட பட்டியல். வெளியிடுவதற்கு முன் விவரங்களை சரிபார்க்கவும்.',
+    'Sell my harvest':'என் விளைபொருளை விற்கவும்',
+    'Speak instead of typing':'தட்டச்சு செய்யாமல் பேசவும்',
+    'Take product photo':'பொருளின் புகைப்படம் எடுக்கவும்',
+    'Camera-first listing':'கேமரா மூலம் பட்டியல்',
+    'Hear my dashboard':'என் டாஷ்போர்டை கேட்கவும்',
+    'Voice summary':'குரல் சுருக்கம்',
+    'Check live backend':'சேவையக நிலையைப் பார்க்கவும்',
+    'Add product':'பொருளைச் சேர்க்கவும்',
+    'Verification':'சரிபார்ப்பு',
+    'Buyer orders':'வாங்குபவர் ஆர்டர்கள்',
+    'Products & inventory':'பொருட்கள் மற்றும் இருப்பு',
+    'Sell by voice':'குரல் மூலம் விற்கவும்',
+    'Save & submit for review':'சேமித்து சரிபார்ப்புக்கு அனுப்பவும்'
+  };
+  function translateFarmerText(){
+    const lang=farmerLanguage;
+    document.querySelectorAll('#farmer h2,#farmer .section-head p,#farmer .farmer-simple-head h3,#farmer .farmer-simple-head p,#farmer .farmer-action b,#farmer .farmer-action span,#farmer .mini-actions button,#inventory h2').forEach(el=>{
+      if(!el.dataset.enText)el.dataset.enText=el.textContent.trim();
+      const original=el.dataset.enText;
+      el.textContent=lang==='ta'?(taText[original]||original):original;
+    });
+    if($('farmerLangToggle'))$('farmerLangToggle').textContent=lang==='ta'?'English':'தமிழ்';
+  }
+  window.applyFarmerLanguage=translateFarmerText;
+  window.toggleFarmerLanguage=async function(){
+    farmerLanguage=farmerLanguage==='ta'?'en':'ta';
+    localStorage.setItem('ff_farmer_language',farmerLanguage);
+    translateFarmerText();
+    if(isFarmer()){
+      try{await api()('/api/profile',{method:'PATCH',body:JSON.stringify({preferred_language:farmerLanguage})});}
+      catch(e){toast('Language changed on this device. Server preference could not be saved.');return;}
+    }
+    toast(farmerLanguage==='ta'?'தமிழ் மொழி தேர்ந்தெடுக்கப்பட்டது':'English selected');
+  };
+
+  window.renderFarmers=function(){
+    const box=$('farmerList');if(!box)return;
+    const groups=new Map();
+    products.filter(p=>p.verified&&p.stock>0).forEach(p=>{
+      const key=(p.farmer||'Farmer')+'|'+(p.farmName||'');
+      if(!groups.has(key))groups.set(key,{name:p.farmer,farm:p.farmName||'Verified farm',district:p.location||'Location not provided',count:0,products:[]});
+      const x=groups.get(key);x.count++;x.products.push(p);
+    });
+    if(!groups.size){box.innerHTML='<div class="card empty" style="grid-column:1/-1">Approved farmers and their live product listings will appear here.</div>';return;}
+    box.innerHTML=Array.from(groups.values()).map(f=>'<div class="card seller"><div class="avatar">👨‍🌾</div><div><h4>'+esc(f.farm)+' ✓</h4><p>'+esc(f.name)+' · '+esc(f.district)+'</p><div class="chips"><span class="chip">✓ Verified farmer</span><span class="chip">'+f.count+' active listing(s)</span></div><button class="btn btn-light" style="margin-top:9px" onclick="showPage(\\'marketplace\\')">View produce</button></div></div>').join('');
+  };
+
+  window.createBulkRequest=async function(){
+    if(!isCustomer()){window.openAuthPortal?.('customer');toast('Sign in as a customer or business buyer to post a bulk request.');return;}
+    const body={
+      product_name:$('bulkProductName')?.value.trim()||'',
+      category:$('bulkCategory')?.value||'Vegetables',
+      quantity:Number($('bulkQuantity')?.value),unit:$('bulkUnit')?.value||'kg',
+      target_price:$('bulkTargetPrice')?.value?Number($('bulkTargetPrice').value):null,
+      needed_by:$('bulkNeededBy')?.value||null,
+      delivery_city:$('bulkDeliveryCity')?.value.trim()||null,
+      delivery_pincode:$('bulkDeliveryPincode')?.value.trim()||null,
+      notes:$('bulkNotes')?.value.trim()||null
+    };
+    if(body.product_name.length<2||!Number.isFinite(body.quantity)||body.quantity<=0){$('bulkRequestStatus').textContent='Enter the produce name and a valid quantity.';return;}
+    const button=document.querySelector('#bulkBuyerPanel .btn-primary');
+    try{
+      if(button){button.disabled=true;button.textContent='Posting…';}
+      await api()('/api/bulk-requests',{method:'POST',body:JSON.stringify(body)});
+      $('bulkRequestStatus').textContent='Your requirement is posted. Approved farmers can now submit offers.';
+      $('bulkProductName').value='';$('bulkQuantity').value='';$('bulkTargetPrice').value='';$('bulkNotes').value='';
+      await loadBulkMarketplace();
+    }catch(e){$('bulkRequestStatus').textContent=e.message||'The request could not be posted.';}
+    finally{if(button){button.disabled=false;button.textContent='Post requirement';}}
+  };
+
+  window.loadBulkMarketplace=async function(){
+    const box=$('bulkRequestsList');if(!box)return;
+    if(!token()){box.innerHTML='<div class="card empty">Sign in to view your requests or available local bulk requirements.</div>';return;}
+    try{
+      const rows=await api()('/api/bulk-requests');
+      if(isFarmer()&&$('bulkBuyerPanel'))$('bulkBuyerPanel').hidden=true;
+      if(isCustomer()&&$('bulkBuyerPanel'))$('bulkBuyerPanel').hidden=false;
+      if(!rows.length){box.innerHTML='<div class="card empty">No bulk requests are open yet. Buyers can post the first requirement.</div>';return;}
+      box.innerHTML=(rows||[]).map(r=>{
+        const requestId=esc(r.id);
+        const isBuyer=String(r.buyer_id)===String(currentUser.id);
+        const actions=isFarmer()&&currentUser.farmerStatus==='approved'
+          ?'<div class="bulk-request-actions"><button class="btn btn-primary" onclick="openBulkOfferForm(\\''+requestId+'\\')">Make an offer</button></div><div id="bulkOfferForm-'+requestId+'"></div>'
+          :isBuyer?'<div class="bulk-request-actions"><button class="btn btn-light" onclick="loadBulkOffers(\\''+requestId+'\\')">View farmer offers</button></div><div id="bulkOffers-'+requestId+'"></div>':'';
+        return '<article class="bulk-request-card"><h3>'+esc(r.product_name)+'</h3><p>'+esc(r.category)+' · Requested by '+(isBuyer?'you':'business buyer')+'</p><div class="bulk-request-meta"><span>'+esc(r.quantity)+' '+esc(r.unit)+'</span>'+(r.target_price?'<span>Target '+money(r.target_price)+'</span>':'')+(r.needed_by?'<span>Needed '+esc(r.needed_by)+'</span>':'')+(r.delivery_city?'<span>📍 '+esc(r.delivery_city)+'</span>':'')+'<span>'+esc(r.status)+'</span></div>'+(r.notes?'<p>'+esc(r.notes)+'</p>':'')+actions+'</article>';
+      }).join('');
+    }catch(e){box.innerHTML='<div class="card empty">'+esc(e.message||'Could not load bulk requests.')+'</div>';}
+  };
+
+  window.openBulkOfferForm=function(id){
+    const host=$('bulkOfferForm-'+id);if(!host)return;
+    if(!isFarmer()||currentUser.farmerStatus!=='approved'){toast('Only approved farmer accounts can send a bulk offer.');return;}
+    const productsForOffer=window.ffFarmerProducts||[];
+    host.innerHTML='<div class="bulk-offer-panel"><label>Choose your product <select id="bulkProduct-'+esc(id)+'">'+productsForOffer.filter(p=>p.status==='active'&&p.stock>0).map(p=>'<option value="'+esc(p.serverId)+'">'+esc(p.name)+' · '+esc(p.stock)+' '+esc(p.unit)+'</option>').join('')+'</select></label><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><input id="bulkOfferQty-'+esc(id)+'" type="number" min="0.1" step="0.1" placeholder="Quantity"><input id="bulkOfferPrice-'+esc(id)+'" type="number" min="0.01" step="0.01" placeholder="Price per unit"></div><button class="btn btn-primary" style="margin-top:9px" onclick="submitBulkOffer(\\''+esc(id)+'\\')">Send offer</button></div>';
+  };
+
+  window.submitBulkOffer=async function(id){
+    const product=$('bulkProduct-'+id)?.value||null;
+    const quantity=Number($('bulkOfferQty-'+id)?.value),price=Number($('bulkOfferPrice-'+id)?.value);
+    if(!Number.isFinite(quantity)||quantity<=0||!Number.isFinite(price)||price<=0){toast('Enter a valid quantity and price.');return;}
+    try{
+      await api()('/api/bulk-requests/'+encodeURIComponent(id)+'/offers',{method:'POST',body:JSON.stringify({product_id:product,offered_quantity:quantity,unit_price:price})});
+      const host=$('bulkOfferForm-'+id);if(host)host.innerHTML='<div class="api-note">Your offer was submitted to the buyer. This is an offer, not a confirmed order.</div>';
+      toast('Bulk offer submitted.');
+    }catch(e){toast(e.message||'Could not submit offer.');}
+  };
+
+  window.loadBulkOffers=async function(id){
+    const host=$('bulkOffers-'+id);if(!host)return;
+    try{
+      const rows=await api()('/api/bulk-requests/'+encodeURIComponent(id)+'/offers');
+      host.innerHTML=rows.length?'<div class="bulk-offer-panel">'+rows.map(o=>'<div style="padding:8px 0;border-bottom:1px solid #e6eee7"><b>'+esc(o.farmer_name)+'</b><p>'+esc(o.offered_quantity)+' units at '+money(o.unit_price)+' per unit · '+esc(o.status)+'</p>'+(o.status==='pending'?'<button class="btn btn-primary" onclick="decideBulkOffer(\\''+esc(o.id)+'\\',\\'accepted\\')">Accept offer</button> <button class="btn btn-light" onclick="decideBulkOffer(\\''+esc(o.id)+'\\',\\'rejected\\')">Decline</button>':'')+'</div>').join('')+'</div>':'<div class="api-note">No offers yet.</div>';
+    }catch(e){host.innerHTML='<div class="api-note">'+esc(e.message||'Could not load offers.')+'</div>';}
+  };
+
+  window.decideBulkOffer=async function(id,status){
+    try{await api()('/api/bulk-offers/'+encodeURIComponent(id),{method:'PATCH',body:JSON.stringify({status})});toast('Offer '+status+'. Create a regular order after confirming quantity and delivery.');await loadBulkMarketplace();}
+    catch(e){toast(e.message||'Could not update offer.');}
+  };
+
+  window.saveAddress=async function(){
+    const label=$('addrLabel')?.value||'Home',name=$('addrName')?.value.trim()||'',mobile=$('addrMobile')?.value.trim()||'',
+      line1=$('addrText')?.value.trim()||'',city=$('addrCity')?.value.trim()||'',state=$('addrState')?.value.trim()||'',pincode=$('addrPin')?.value.trim()||'';
+    if(!name||line1.length<5||!city||!state||!/^[0-9]{10}$/.test(mobile)||!/^[0-9]{6}$/.test(pincode)){toast('Enter name, valid 10-digit mobile, full address, city, state and 6-digit pincode.');return;}
+    if(!isCustomer()){window.openAuthPortal?.('customer');toast('Sign in as a customer before saving a delivery address.');return;}
+    try{
+      const row=await api()('/api/addresses',{method:'POST',body:JSON.stringify({label,recipient_name:name,mobile,line1,city,state,pincode})});
+      addresses.push({id:row.id,label,name,mobile,text:line1,city,state,pin:pincode});
+      selectedAddress=addresses.length-1;persist();closeModals();renderCheckout();toast('Delivery address saved.');
+    }catch(e){toast(e.message||'Address could not be saved.');}
+  };
+
+  window.renderCheckout=function(){
+    ['st1','st2','st3','st4'].forEach((id,i)=>$(id)?.classList.toggle('on',i+1===checkoutStep));
+    const panel=$('checkoutPanel');if(!panel)return;
+    if(checkoutStep===1){
+      panel.innerHTML='<h3>Review your basket</h3><p class="small" style="margin-top:5px">'+cart.length+' product line(s)</p><div style="margin-top:12px">'+cart.map(c=>'<div class="ps-row"><span>'+esc(c.name)+' ×'+esc(c.qty)+' '+esc(c.unit)+'</span><b>'+money(c.price*c.qty)+'</b></div>').join('')+'</div><div class="ps-row"><b>Subtotal</b><b>'+money(cart.reduce((n,c)=>n+Number(c.price)*Number(c.qty),0))+'</b></div><div class="api-note">The server checks the latest stock and price before creating an order.</div><div class="modal-actions"><button class="btn btn-primary" onclick="checkoutStep=2;renderCheckout()">Continue to address →</button></div>';
+      return;
+    }
+    if(checkoutStep===2){
+      if(!token()){
+        panel.innerHTML='<h3>Sign in to continue</h3><p class="small">Save your own delivery address to place an order.</p><button class="btn btn-primary" style="margin-top:12px" onclick="openAuthPortal(\\'customer\\')">Sign in as customer</button>';
+        return;
+      }
+      panel.innerHTML='<h3>Delivery address</h3><div class="address-grid">'+(addresses||[]).map((a,i)=>'<div class="address-card '+(i===selectedAddress?'sel':'')+'" onclick="selectedAddress='+i+';renderCheckout()"><b>📍 '+esc(a.label)+'</b><p class="small" style="margin-top:4px">'+esc(a.name)+' · '+esc(a.mobile)+'<br>'+esc(a.text)+', '+esc(a.city)+', '+esc(a.state)+' · '+esc(a.pin)+'</p></div>').join('')+'</div>'+(addresses.length?'':'<div class="api-note">You have not saved a delivery address yet.</div>')+'<button class="btn btn-light" style="margin-top:10px" onclick="openModal(\\'addressModal\\')">＋ Add delivery address</button><div class="modal-actions"><button class="btn btn-light" onclick="checkoutStep=1;renderCheckout()">← Back</button><button class="btn btn-primary" '+(addresses.length?'':'disabled')+' onclick="checkoutStep=3;renderCheckout()">Continue →</button></div>';
+      return;
+    }
+    if(checkoutStep===3){
+      panel.innerHTML='<h3>Payment method</h3><div class="pay-option sel"><b>Cash on Delivery</b><span class="small" style="float:right">Available for pilot orders</span></div><div class="api-note">Online payments are not enabled yet. No payment is collected in this prototype. For COD, the collection status stays pending until it is confirmed separately.</div><div class="modal-actions"><button class="btn btn-light" onclick="checkoutStep=2;renderCheckout()">← Back</button><button class="btn btn-primary" onclick="placeOrder()">Place COD order →</button></div>';
+      return;
+    }
+    panel.innerHTML='<div style="text-align:center;padding:24px 10px"><div style="font-size:52px">✅</div><h2>Order sent to the farmer</h2><p class="small" style="margin-top:7px">Your order has been recorded. The farmer must confirm it before preparation begins.</p><div class="api-note" style="margin-top:15px">Order '+esc(window.ffLastOrderNumber||'')+' · Payment: Cash on Delivery · Collection pending</div><button class="btn btn-primary" style="margin-top:15px" onclick="showPage(\\'orders\\')">View my orders</button></div>';
+  };
+
+  window.placeOrder=async function(){
+    if(!cart.length){toast('Your cart is empty.');return;}
+    if(!isCustomer()){window.openAuthPortal?.('customer');toast('Sign in as a customer before placing an order.');return;}
+    const address=addresses[selectedAddress];
+    if(!address?.id){checkoutStep=2;renderCheckout();toast('Choose or save a delivery address first.');return;}
+    const items=cart.map(c=>({product_id:c.serverId||String(c.id||'').replace(/^api-/,''),quantity:Number(c.qty)}));
+    if(items.some(x=>!x.product_id||!Number.isFinite(x.quantity)||x.quantity<=0)){toast('Your cart contains an invalid product. Refresh the cart and try again.');return;}
+    const button=$('#checkoutPanel .btn-primary');if(button){button.disabled=true;button.textContent='Placing order…';}
+    try{
+      const result=await api()('/api/orders',{method:'POST',body:JSON.stringify({items,address_id:address.id,payment_method:'cash_on_delivery'})});
+      const created=result.orders||[];
+      window.ffLastOrderNumber=created.map(x=>x.order_number).filter(Boolean).join(', ');
+      await Promise.all([window.ffBackend?.syncCart?.(),window.ffBackend?.syncOrders?.(),loadPublicProducts(),window.ffBackend?.syncNotifications?.()]);
+      cart=[];persist();updateBadges();checkoutStep=4;renderCheckout();
+      toast('COD order recorded. Waiting for farmer confirmation.');
+    }catch(e){toast(e.message||'The order could not be placed. Check stock and try again.');}
+    finally{if(button){button.disabled=false;button.textContent='Place COD order →';}}
+  };
+
+  window.renderFarmerOrdersTable=window.renderFarmerOrdersTable;
+  window.loadFarmerDashboard=loadFarmerDashboard;
+  window.addEventListener('online',function(){if(isFarmer())toast('You are back online. Use Sync saved drafts to upload offline listings.');});
+  window.addEventListener('DOMContentLoaded',function(){
+    if(isFarmer())loadFarmerDashboard();
+    if($('bulkMarketplace')&&token())loadBulkMarketplace();
+    applyFarmerLanguage();
+  });
+  // The API bootstrap is delayed in the original script, so also refresh role-specific farmer data afterwards.
+  const oldBackendBoot=window.ffBackend?.boot;
+  if(window.ffBackend&&oldBackendBoot){
+    window.ffBackend.boot=async function(){
+      await oldBackendBoot();
+      if(isFarmer())await loadFarmerDashboard();
+      await loadPublicProducts().catch(()=>{});
+    };
+  }
+
 })();
 </script>
 
