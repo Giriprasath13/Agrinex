@@ -1643,9 +1643,11 @@ async def verify_razorpay_checkout(body: RazorpayVerifyRequest, authorization: s
         order_id, body.razorpay_order_id, body.razorpay_payment_id,
         f"checkout:{body.razorpay_payment_id}",
     )
-    await _send_whatsapp_order_update(
-        token, order_id, order["order_number"], "Payment captured - order awaiting farmer acceptance"
-    )
+    if isinstance(result, dict) and not result.get("duplicate") and not result.get("already_confirmed"):
+        await _send_whatsapp_order_update(
+            token, order_id, order["order_number"],
+            "Payment captured - order awaiting farmer acceptance",
+        )
     return {"verified": True, "payment": result, "order_number": order["order_number"]}
 
 
@@ -1704,10 +1706,11 @@ async def razorpay_webhook(request: Request):
         )
         # Do not release reserved stock on payment.failed: a later captured event
         # may arrive for the same attempt. Reconcile capture before cancellation.
-        await _send_whatsapp_order_update(
-            service_key, str(order["id"]), str(order["order_number"]),
-            "Payment attempt failed - order not paid",
-        )
+        if not (isinstance(result, dict) and result.get("duplicate")):
+            await _send_whatsapp_order_update(
+                service_key, str(order["id"]), str(order["order_number"]),
+                "Payment attempt failed - order not paid",
+            )
         return {"received": True, "processed": True, "result": result}
 
     await _verify_gateway_payment_matches_order(
@@ -1716,10 +1719,11 @@ async def razorpay_webhook(request: Request):
     result = await _confirm_razorpay_payment_service_role(
         order["id"], provider_order_id, payment_id, event_id
     )
-    await _send_whatsapp_order_update(
-        service_key, str(order["id"]), str(order["order_number"]),
-        "Payment captured - order awaiting farmer acceptance",
-    )
+    if isinstance(result, dict) and not result.get("duplicate") and not result.get("already_confirmed"):
+        await _send_whatsapp_order_update(
+            service_key, str(order["id"]), str(order["order_number"]),
+            "Payment captured - order awaiting farmer acceptance",
+        )
     return {"received": True, "processed": True, "result": result}
 
 
