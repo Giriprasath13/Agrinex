@@ -2626,7 +2626,7 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
       else toast(name+' was saved as a draft. Admin approval is required before customers can see it.');
     }catch(e){
       if(/Failed to fetch|NetworkError|fetch/i.test(e.message||'')){
-        const draft={id:'draft-'+Date.now(),saved_at:new Date().toISOString(),payload:body,needs_photo:Boolean(file),photo_not_saved:Boolean(file)};
+        const offlinePayload={...body};delete offlinePayload.image_base64;delete offlinePayload.image_mime_type;delete offlinePayload.image_filename;const draft={id:'draft-'+Date.now(),saved_at:new Date().toISOString(),payload:offlinePayload,needs_photo:Boolean(file),photo_not_saved:Boolean(file)};
         try{
           const existing=JSON.parse(localStorage.getItem(DRAFT_KEY)||'[]');existing.push(draft);localStorage.setItem(DRAFT_KEY,JSON.stringify(existing));
           closeModals();toast('Connection unavailable. A text-only draft was saved on this device. Re-select its photo before syncing.');
@@ -2648,16 +2648,17 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
     let drafts=[];try{drafts=JSON.parse(localStorage.getItem(DRAFT_KEY)||'[]');}catch(_){}
     if(!drafts.length){toast('No offline farmer drafts to sync.');return;}
     let synced=0,remaining=[];
-    for(const d of drafts){
+    for(let index=0;index<drafts.length;index++){
+      const d=drafts[index];
       try{
-        const result=await api()('/api/products',{method:'POST',body:JSON.stringify(d.payload)});
+        await api()('/api/products',{method:'POST',body:JSON.stringify(d.payload)});
         synced++;
-        if(result.published)continue;
-      }catch(e){remaining.push(d);remaining.push(...drafts.slice(synced+remaining.length));break;}
+      }catch(e){remaining=drafts.slice(index);break;}
     }
     localStorage.setItem(DRAFT_KEY,JSON.stringify(remaining));
     await Promise.all([loadFarmerInventory(),loadPublicProducts(),loadFarmerDashboard()]);
-    toast(synced+' draft(s) synced. '+remaining.length+' remain on this device.');
+    const photoNote= drafts.some(d=>d.photo_not_saved)?' Re-select photos for drafts that had images.':'';
+    toast(synced+' draft(s) synced to your farmer account. '+remaining.length+' remain on this device.'+photoNote);
   };
 
   window.openVoiceSell=function(){
@@ -2697,7 +2698,7 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
   };
 
   window.checkApiHealth=async function(){
-    try{const d=await api()('/api/health');if($('apiHealth'))$('apiHealth').textContent=d.marketplace_configured?'● Live backend':'● Backend configuration incomplete';toast('Backend status: '+(d.marketplace_configured?'connected':'configuration incomplete'));}
+    try{const d=await api()('/api/marketplace/health');if($('apiHealth'))$('apiHealth').textContent=d.marketplace_configured?'● Live backend':'● Backend configuration incomplete';toast('Backend status: '+(d.marketplace_configured?'connected':'configuration incomplete'));}
     catch(e){if($('apiHealth'))$('apiHealth').textContent='● Offline';toast(e.message||'Backend is not reachable.');}
   };
 
@@ -2918,6 +2919,7 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
   // The API bootstrap is delayed in the original script, so also refresh role-specific farmer data afterwards.
 
   window.ffAdminAuthorized=false;
+  window.ffAdminAttempted=false;
   function renderAdminApplications(rows){
     const body=$('adminFarmerApplications');if(!body)return;
     if(!rows?.length){body.innerHTML='<tr><td colspan="6">No pending or rejected farmer applications.</td></tr>';return;}
@@ -2936,6 +2938,7 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
     const status=$('adminAccessStatus');
     if(!token()){if(status)status.textContent='Sign in with the administrator account first.';window.openAuthPortal?.('choose');return;}
     if(status)status.textContent='Checking private administrator access…';
+    window.ffAdminAttempted=true;
     try{
       const rows=await api()('/api/admin/farmer-applications');
       window.ffAdminAuthorized=true;
@@ -2946,6 +2949,7 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
       window.ffAdminAuthorized=false;
       if(status)status.textContent=e.message||'This signed-in account is not in the administrator allowlist.';
       const body=$('adminFarmerApplications');if(body)body.innerHTML='<tr><td colspan="6">Access denied. Ask the project owner to add this account UUID to private.agrinex_admins in Supabase.</td></tr>';
+      if(!$('admin')?.classList.contains('active'))window.showPage('admin');
     }
   };
   window.openAdminConsole=function(){
@@ -2964,7 +2968,7 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
   };
   const previousShowPageForAdmin=window.showPage;
   window.showPage=function(id){
-    if(id==='admin'&&!window.ffAdminAuthorized){window.openAdminConsole();return;}
+    if(id==='admin'&&!window.ffAdminAttempted){window.openAdminConsole();return;}
     return previousShowPageForAdmin(id);
   };
 
