@@ -2916,6 +2916,58 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
     applyFarmerLanguage();
   });
   // The API bootstrap is delayed in the original script, so also refresh role-specific farmer data afterwards.
+
+  window.ffAdminAuthorized=false;
+  function renderAdminApplications(rows){
+    const body=$('adminFarmerApplications');if(!body)return;
+    if(!rows?.length){body.innerHTML='<tr><td colspan="6">No pending or rejected farmer applications.</td></tr>';return;}
+    body.innerHTML=rows.map(r=>{
+      const id=esc(r.id);
+      const location=[r.farm_village,r.farm_district,r.farm_pincode].filter(Boolean).map(esc).join(', ')||'Not provided';
+      const submitted=r.verification_submitted_at?new Date(r.verification_submitted_at).toLocaleString('en-IN'):'Not submitted';
+      return '<tr><td>'+esc(r.full_name)+'<br><small>'+esc(r.phone)+'</small></td><td>'+esc(r.farm_name||'—')+'</td><td>'+location+'</td><td>'+esc(submitted)+'</td><td><span class="status warn">'+esc(r.farmer_status)+'</span></td><td><button class="btn btn-primary" data-admin-action="approved" data-id="'+id+'">Approve</button> <button class="btn btn-danger" data-admin-action="rejected" data-id="'+id+'">Reject</button></td></tr>';
+    }).join('');
+    body.onclick=async function(event){
+      const button=event.target.closest('[data-admin-action]');if(!button)return;
+      await window.reviewFarmerApplication(button.dataset.id,button.dataset.adminAction);
+    };
+  }
+  window.loadAdminConsole=async function(){
+    const status=$('adminAccessStatus');
+    if(!token()){if(status)status.textContent='Sign in with the administrator account first.';window.openAuthPortal?.('choose');return;}
+    if(status)status.textContent='Checking private administrator access…';
+    try{
+      const rows=await api()('/api/admin/farmer-applications');
+      window.ffAdminAuthorized=true;
+      if(status)status.textContent='Administrator access confirmed by the server. Only allowlisted user IDs can review farmers.';
+      renderAdminApplications(rows||[]);
+      if(!$('admin')?.classList.contains('active'))window.showPage('admin');
+    }catch(e){
+      window.ffAdminAuthorized=false;
+      if(status)status.textContent=e.message||'This signed-in account is not in the administrator allowlist.';
+      const body=$('adminFarmerApplications');if(body)body.innerHTML='<tr><td colspan="6">Access denied. Ask the project owner to add this account UUID to private.agrinex_admins in Supabase.</td></tr>';
+    }
+  };
+  window.openAdminConsole=function(){
+    if(!token()){window.openAuthPortal?.('choose');toast('Sign in first. Administrator access is checked by the server.');return;}
+    window.loadAdminConsole();
+  };
+  window.reviewFarmerApplication=async function(id,decision){
+    if(!window.ffAdminAuthorized){toast('Administrator access is required.');return;}
+    const note=prompt(decision==='approved'?'Optional approval note':'Reason the application needs changes','');
+    if(note===null)return;
+    try{
+      await api()('/api/admin/farmer-applications/'+encodeURIComponent(id)+'/review?decision='+encodeURIComponent(decision)+'&notes='+encodeURIComponent(note));
+      toast(decision==='approved'?'Farmer approved. Their drafts can now be published.':'Farmer application marked for follow-up.');
+      await window.loadAdminConsole();
+    }catch(e){toast(e.message||'Farmer review could not be saved.');}
+  };
+  const previousShowPageForAdmin=window.showPage;
+  window.showPage=function(id){
+    if(id==='admin'&&!window.ffAdminAuthorized){window.openAdminConsole();return;}
+    return previousShowPageForAdmin(id);
+  };
+
   const oldBackendBoot=window.ffBackend?.boot;
   if(window.ffBackend&&oldBackendBoot){
     window.ffBackend.boot=async function(){
