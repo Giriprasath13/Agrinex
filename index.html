@@ -2933,7 +2933,11 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
       panel.innerHTML='<h3>Payment method</h3><div class="pay-grid"><div class="pay-option '+(codSelected?'sel':'')+'" onclick="selectedPayment=\'COD\';renderCheckout()"><b>Cash on Delivery</b><span class="small" style="display:block;margin-top:4px">Collection must be confirmed separately.</span></div>'+razorpayOption+'</div><div class="api-note">'+(window.ffPaymentConfiguration?.razorpayTest?'Razorpay is connected in test mode only.':'Online gateway checkout is hidden until test credentials and a server-side verification key are configured.')+' A payment is never considered successful until the server verifies the provider signature and captured transaction.</div><div class="modal-actions"><button class="btn btn-light" onclick="checkoutStep=2;renderCheckout()">← Back</button><button class="btn btn-primary" onclick="placeOrder()">'+(codSelected?'Place COD order →':'Continue to test payment →')+'</button></div>';
       return;
     }
-    panel.innerHTML='<div style="text-align:center;padding:24px 10px"><div style="font-size:52px">✅</div><h2>Order sent to the farmer</h2><p class="small" style="margin-top:7px">Your order has been recorded. The farmer must confirm it before preparation begins.</p><div class="api-note" style="margin-top:15px">Order '+esc(window.ffLastOrderNumber||'')+' · Payment: Cash on Delivery · Collection pending</div><button class="btn btn-primary" style="margin-top:15px" onclick="showPage(&quot;orders&quot;)">View my orders</button></div>';
+    if(window.ffLastPaymentPending){
+      panel.innerHTML='<div style="text-align:center;padding:24px 10px"><div style="font-size:52px">⏳</div><h2>Payment not yet confirmed</h2><p class="small" style="margin-top:7px">Your order has been saved, but AgriNex has not verified a captured payment. Do not place the same order again. Refresh order history to see the latest gateway confirmation.</p><div class="api-note" style="margin-top:15px">Order '+esc(window.ffLastOrderNumber||'')+' · Status: awaiting payment reconciliation</div><button class="btn btn-primary" style="margin-top:15px" onclick="showPage(&quot;orders&quot;)">Check my orders</button></div>';
+    }else{
+      panel.innerHTML='<div style="text-align:center;padding:24px 10px"><div style="font-size:52px">✅</div><h2>Order sent to the farmer</h2><p class="small" style="margin-top:7px">Your order has been recorded. The farmer must confirm it before preparation begins.</p><div class="api-note" style="margin-top:15px">Order '+esc(window.ffLastOrderNumber||'')+' · Payment: Cash on Delivery · Collection pending</div><button class="btn btn-primary" style="margin-top:15px" onclick="showPage(&quot;orders&quot;)">View my orders</button></div>';
+    }
   };
 
   async function loadRazorpayCheckoutScript(){
@@ -3026,12 +3030,23 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
         loadPublicProducts(),
         window.ffBackend?.syncNotifications?.()
       ]);
-      cart=[];persist();updateBadges();checkoutStep=4;renderCheckout();
+      cart=[];persist();updateBadges();
+      window.ffLastPaymentPending=false;
+      checkoutStep=4;renderCheckout();
       toast(paymentMethod==='razorpay'?'Test payment verified by the server.':'COD order recorded. Waiting for farmer confirmation.');
     }catch(e){
       if(orderCreated){
         window.ffLastPaymentPending=paymentMethod==='razorpay';
-        await Promise.allSettled([window.ffBackend?.syncOrders?.(),window.ffBackend?.syncNotifications?.()]);
+        // The server has already reserved stock and cleared its cart. Clear local
+        // state as well so a dismissed gateway window cannot cause a duplicate order.
+        cart=[];persist();updateBadges();
+        await Promise.allSettled([
+          window.ffBackend?.syncCart?.(),
+          window.ffBackend?.syncOrders?.(),
+          loadPublicProducts(),
+          window.ffBackend?.syncNotifications?.()
+        ]);
+        checkoutStep=4;renderCheckout();
       }
       toast(e.message||'Checkout could not be completed. Check your order history before retrying.');
     }finally{
@@ -3069,6 +3084,7 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
     await window.refreshIntegrationConfiguration();
     if(isFarmer())await loadFarmerDashboard();
     if($('bulkMarketplace')&&token())await loadBulkMarketplace();
+    if(token())await loadWhatsAppPreferences();
     if(!token())await loadPublicProducts().catch(()=>{});
   });
   // The API bootstrap is delayed in the original script, so also refresh role-specific farmer data afterwards.
@@ -3375,14 +3391,10 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
         const trimmed=original.trim();
         if(!trimmed)continue;
         const translated=farmerLanguage==='ta'?(sharedTamil[trimmed]||trimmed):trimmed;
-        if(translated!==trimmed){
-          const leading=original.match(/^\\s*/)?.[0]||'';
-          const trailing=original.match(/\\s*$/)?.[0]||'';
-          node.nodeValue=leading+translated+trailing;
-        }else if(farmerLanguage!=='ta'&&node.nodeValue!==original){
-          node.nodeValue=original;
-        }
-      }
+        const leading=original.match(/^\\s*/)?.[0]||'';
+        const trailing=original.match(/\\s*$/)?.[0]||'';
+        const desired=leading+translated+trailing;
+        if(node.nodeValue!==desired)node.nodeValue=desired;
       document.querySelectorAll('[placeholder],[aria-label],[title]').forEach(el=>{
         let saved=originalAttributes.get(el);
         if(!saved){saved={};originalAttributes.set(el,saved);}
