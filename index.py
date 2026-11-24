@@ -183,6 +183,7 @@ def session_response(access_token: str, profile: dict) -> dict:
             "role": profile["role"],
             "farm_name": profile.get("farm_name"),
             "farmer_status": profile["farmer_status"],
+            "preferred_language": profile.get("preferred_language", "en"),
         },
     }
 
@@ -309,6 +310,10 @@ async def me(authorization: str | None = Header(default=None)):
         "role": profile["role"],
         "farm_name": profile.get("farm_name"),
         "farmer_status": profile["farmer_status"],
+        "preferred_language": profile.get("preferred_language", "en"),
+        "farm_village": profile.get("farm_village"),
+        "farm_district": profile.get("farm_district"),
+        "farm_pincode": profile.get("farm_pincode"),
     }
 
 
@@ -1060,7 +1065,7 @@ async def upload_product_image(product_id: str, body: ImageUploadRequest,
     return {"image_url": url}
 
 
-@app.get("/api/health")
+@app.get("/api/marketplace/health")
 async def marketplace_health():
     return {"status": "ok", "service": "agrinex-marketplace-api",
             "marketplace_configured": bool(os.getenv("SUPABASE_URL") and (os.getenv("SUPABASE_PUBLISHABLE_KEY") or os.getenv("SUPABASE_ANON_KEY"))),
