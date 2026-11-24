@@ -654,12 +654,16 @@ async def update_marketplace_product(product_id: str, body: ProductCreateRequest
 async def remove_marketplace_product(product_id: str, authorization: str | None = Header(default=None)):
     token, profile = await _profile_from_header(authorization, "farmer")
     product_id = _uuid_or_422(product_id, "product ID")
-    await supabase_request(
-        "DELETE", "/rest/v1/agrinex_products",
+    rows = await supabase_request(
+        "PATCH", "/rest/v1/agrinex_products",
         access_token=token,
         params={"id": f"eq.{product_id}", "farmer_id": f"eq.{profile['id']}"},
+        payload={"status": "archived"},
+        extra_headers={"Prefer": "return=representation"},
     )
-    return {"deleted": True}
+    if not _first_row(rows):
+        raise HTTPException(status_code=404, detail="Product not found or not owned by this farmer.")
+    return {"archived": True}
 
 
 @app.get("/api/cart")
