@@ -1258,7 +1258,7 @@ async def set_order_status(order_id: str, body: OrderStatusRequest, authorizatio
 @app.get("/api/farmer/orders")
 async def get_farmer_orders(authorization: str | None = Header(default=None)):
     token, profile = await _profile_from_header(authorization, "farmer")
-    return await supabase_request(
+    rows = await supabase_request(
         "GET", "/rest/v1/agrinex_orders",
         access_token=token,
         params={
@@ -1268,6 +1268,12 @@ async def get_farmer_orders(authorization: str | None = Header(default=None)):
             "limit": "100",
         },
     )
+    # Do not expose unpaid Razorpay reservations as fulfilment work.
+    return [
+        row for row in (rows or [])
+        if row.get("payment_method") == "cash_on_delivery"
+        or row.get("payment_status") == "captured"
+    ]
 
 
 @app.get("/api/farmer/earnings")
@@ -1677,7 +1683,7 @@ async def book_order_shipment(
             "billing_state": address["state"],
             "billing_country": "India",
             "billing_email": str(address["email"]).strip(),
-            "billing_phone": re.sub(r"\\D", "", str(address["mobile"])),
+            "billing_phone": re.sub(r"\D", "", str(address["mobile"])),
             "shipping_is_billing": True,
             "order_items": order_items,
             "payment_method": "COD" if order["payment_method"] == "cash_on_delivery" else "Prepaid",
@@ -1911,7 +1917,12 @@ async def marketplace_health():
             "sms": {"configured": sms_ready, "note": "Verified manually in Supabase Auth dashboard; no provider secret is exposed here."},
             "razorpay": {"configured": razorpay_ready, "mode": razorpay_mode if razorpay_ready else "disabled", "live_commerce_approved": live_approved},
             "whatsapp": {"configured": whatsapp_ready, "requires_opt_in": True, "uses_approved_template": True},
-            "shiprocket": {"configured": shiprocket_ready, "booking_requires_farmer_acceptance": True},
+            "shiprocket": {
+                "configured": shiprocket_ready,
+                "booking_allowed": shiprocket_ready and os.getenv("AGRI_LIVE_LOGISTICS_APPROVED", "").strip().lower() == "true",
+                "booking_requires_farmer_acceptance": True,
+                "live_booking_disabled_for_student_pilot": os.getenv("AGRI_LIVE_LOGISTICS_APPROVED", "").strip().lower() != "true",
+            },
             "market_prices": {"import_enabled": True, "verified_observations_only": True},
             "automatic_farmer_transfers": {"enabled": False, "reason": "Adult-operated marketplace and seller settlement onboarding is required."}
         },
