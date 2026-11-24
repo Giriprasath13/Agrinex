@@ -823,10 +823,20 @@
     <section class="page" id="ai"><div class="section-head"><div><h2>Farm AI</h2><p>Task-oriented help for farmers and consumers. This frontend uses demo responses; connect your AI/API key for live intelligence.</p></div><span class="location-chip">🤖 AI Assistant</span></div><div class="api-note" style="margin:0 0 12px">API-ready: set <b>localStorage.ff_ai_endpoint</b> to your secure backend endpoint. <button class="btn btn-light" style="float:right;padding:5px 8px;font-size:9px" onclick="const u=prompt('FastAPI base URL',getApiBase()||'http://localhost:8000');if(u!==null){storage.set('ff_api_base',u.trim());checkApiHealth()}" >Configure backend</button> Never put an LLM secret directly in this HTML.</div><div class="ai-grid"><div class="quick-ai"><button class="quick-card" onclick="askAI('What should I price my tomato?')"><b>💰 Tomato price</b><span>Recommend a price</span></button><button class="quick-card" onclick="askAI('Weather for my farm')"><b>🌦️ Farm weather</b><span>Advisory placeholder</span></button><button class="quick-card" onclick="askAI('Which crop should I grow?')"><b>🌾 Crop recommendation</b><span>Choose crops by conditions</span></button><button class="quick-card" onclick="askAI('What is today\'s demand?')"><b>📈 Today's demand</b><span>Demand signal placeholder</span></button><button class="quick-card" onclick="askAI('Find cheapest vegetables')"><b>🛒 Cheapest vegetables</b><span>Consumer shopping help</span></button><button class="quick-card" onclick="askAI('Find farmers nearby')"><b>📍 Farmers nearby</b><span>Compare distance</span></button></div><div class="card chat"><div class="chat-head"><div><b>🌱 Farm AI</b><div class="small">Natural-language assistant</div></div><button class="btn btn-light" onclick="clearChat()">Clear</button></div><div class="chat-body" id="chatBody"><div class="bubble ai">Hello! I can help with pricing, demand, crop planning, delivery-friendly shopping and marketplace comparisons. Try a task above.</div></div><div class="chat-input"><input id="aiInput" placeholder="Ask anything..." onkeydown="if(event.key==='Enter')sendAI()"><button class="btn btn-primary" onclick="sendAI()">➤</button></div></div></div></section>
   <section class="page" id="admin"><div class="section-head"><div><h2>AgriNex administration</h2><p>Restricted to user IDs explicitly added to the private administrator allowlist in Supabase.</p></div><button class="btn btn-light" onclick="loadAdminConsole()">↻ Refresh queue</button></div><div id="adminAccessStatus" class="api-note">Checking administrator access…</div>
       <div class="card admin-market-import" style="margin-top:14px" id="adminPriceImportPanel">
-        <h3>Import verified mandi-price observations</h3>
-        <p class="small">Import only rows checked against an official source URL and arrival date. This does not fetch or invent current prices.</p>
+        <h3>Daily AGMARKNET market-price sync</h3>
+        <p class="small">Fetches dated wholesale observations from the Government of India's daily data.gov.in resource. This is updated daily, not a real-time or farm-gate price feed.</p>
+        <div class="farmer-insight-controls">
+          <label>State<input id="marketSyncState" value="Tamil Nadu" maxlength="60"></label>
+          <label>District (optional)<input id="marketSyncDistrict" maxlength="80" placeholder="Coimbatore"></label>
+          <label>Commodity (optional)<input id="marketSyncCommodity" maxlength="80" placeholder="Tomato"></label>
+          <label>Maximum rows<input id="marketSyncLimit" type="number" min="1" max="500" value="100"></label>
+          <button class="btn btn-primary" onclick="syncDailyMandiPrices()">Sync daily prices</button>
+        </div>
+        <div class="api-note">Source resource: 9ef84268-d588-465a-a308-a864a43d0070 · Server API key required.</div>
+        <h3 style="margin-top:16px">Manual verified import</h3>
+        <p class="small">Fallback for official files: import only rows checked against their source URL and arrival date.</p>
         <textarea id="marketPriceImportJson" rows="5" placeholder='Paste a JSON array of verified source rows here.'></textarea>
-        <div class="modal-actions"><button class="btn btn-primary" onclick="importVerifiedMarketPrices()">Import verified rows</button></div>
+        <div class="modal-actions"><button class="btn btn-light" onclick="importVerifiedMarketPrices()">Import verified rows</button></div>
         <div id="marketPriceImportStatus" class="api-note" aria-live="polite">Admin allowlist access is required. No market prices are present until imported.</div>
       </div>
       <div class="card admin-cod-reconcile" style="margin-top:14px">
