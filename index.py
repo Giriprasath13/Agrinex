@@ -1352,12 +1352,14 @@ async def create_customer_order(body: OrderCreateRequest, authorization: str | N
             "local_order_id": order["id"],
         }
     else:
-        await _send_whatsapp_order_update(
-            token,
-            str(created_orders[0]["id"]),
-            str(created_orders[0]["order_number"]),
-            "Order placed - awaiting farmer acceptance",
-        )
+        # Each farmer receives a separate order record. Notify only opted-in participants.
+        for created_order in created_orders:
+            await _send_whatsapp_order_update(
+                token,
+                str(created_order["id"]),
+                str(created_order["order_number"]),
+                "Order placed - awaiting farmer acceptance",
+            )
 
     cart_cleared = True
     try:
@@ -1374,11 +1376,23 @@ async def create_customer_order(body: OrderCreateRequest, authorization: str | N
 async def set_order_status(order_id: str, body: OrderStatusRequest, authorization: str | None = Header(default=None)):
     token, _ = await _profile_from_header(authorization)
     order_id = _uuid_or_422(order_id, "order ID")
-    return await supabase_request(
+    result = await supabase_request(
         "POST", "/rest/v1/rpc/update_agrinex_order_status",
         access_token=token,
         payload={"p_order_id": order_id, "p_status": body.status},
     )
+    order_rows = await supabase_request(
+        "GET", "/rest/v1/agrinex_orders",
+        access_token=token,
+        params={"select": "id,order_number", "id": f"eq.{order_id}", "limit": "1"},
+    )
+    order = _first_row(order_rows)
+    if order:
+        await _send_whatsapp_order_update(
+            token, order_id, str(order["order_number"]),
+            "Order status: " + body.status.replace("_", " "),
+        )
+    return result
 
 
 @app.get("/api/farmer/orders")
@@ -1423,8 +1437,13 @@ async def get_farmer_summary(authorization: str | None = Header(default=None)):
         "GET", "/rest/v1/agrinex_orders", access_token=token,
         params={"select": "id,status,total,created_at", "farmer_id": f"eq.{profile['id']}", "limit": "500"},
     )
-    delivered = [o for o in orders or [] if o.get("status") == "delivered"]
-    pending = [o for o in orders or [] if o.get("status") in ("pending_acceptance", "confirmed", "preparing")]
+    fulfilment_orders = [
+        o for o in (orders or [])
+        if o.get("payment_method") == "cash_on_delivery"
+        or o.get("payment_status") == "captured"
+    ]
+    delivered = [o for o in fulfilment_orders if o.get("status") == "delivered"]
+    pending = [o for o in fulfilment_orders if o.get("status") in ("pending_acceptance", "confirmed", "preparing")]
     return {
         "farmer_status": profile.get("farmer_status"),
         "product_count": len(products or []),
@@ -1685,6 +1704,10 @@ async def razorpay_webhook(request: Request):
         )
         # Do not release reserved stock on payment.failed: a later captured event
         # may arrive for the same attempt. Reconcile capture before cancellation.
+        await _send_whatsapp_order_update(
+            service_key, str(order["id"]), str(order["order_number"]),
+            "Payment attempt failed - order not paid",
+        )
         return {"received": True, "processed": True, "result": result}
 
     await _verify_gateway_payment_matches_order(
@@ -1692,6 +1715,10 @@ async def razorpay_webhook(request: Request):
     )
     result = await _confirm_razorpay_payment_service_role(
         order["id"], provider_order_id, payment_id, event_id
+    )
+    await _send_whatsapp_order_update(
+        service_key, str(order["id"]), str(order["order_number"]),
+        "Payment captured - order awaiting farmer acceptance",
     )
     return {"received": True, "processed": True, "result": result}
 
