@@ -963,7 +963,7 @@
 </div>
 <div class="overlay" id="loginModal"><div class="modal"><div class="modal-head"><h3>Welcome to AgriNex</h3><button class="close" onclick="closeModals()">×</button></div><p class="small" style="margin-top:4px">Demo profile. Connect Firebase/Supabase Auth for production accounts.</p><div class="form-grid"><div class="field full"><label>Mobile number</label><input id="loginContact" inputmode="numeric" autocomplete="tel" placeholder="10-digit mobile number"></div><div class="field"><label>Password</label><input id="loginPassword" type="password" autocomplete="current-password" placeholder="8+ characters"></div><div class="field"><label>Account type (sign up)</label><select id="loginRole"><option value="customer">Customer</option><option value="farmer">Farmer</option></select></div><div class="field full" id="loginFarmNameWrap" style="display:none"><label>Farm name (farmer sign up)</label><input id="loginFarmName" placeholder="e.g. Green Leaf Farm"></div></div><div class="modal-actions"><button class="btn btn-light" onclick="closeModals()">Cancel</button><button class="btn btn-soft" onclick="registerBackendUser()">Create account</button><button class="btn btn-primary" onclick="loginDemo()">Login</button></div><div id="accountActions" style="margin-top:10px"></div></div></div>
 <div class="overlay" id="productModal"><div class="modal"><div class="modal-head"><h3>Add a product</h3><button class="close" onclick="closeModals()">×</button></div><p class="small" style="margin-top:4px">Listings are stored in the AgriNex shared catalogue. Unapproved farmers can save drafts, but only approved farmers can publish.</p><div class="form-grid"><div class="field"><label>Product name</label><input id="newName" placeholder="e.g. Fresh Tomato"></div><div class="field"><label>Category</label><select id="newCategory"><option>Vegetables</option><option>Fruits</option><option>Grains</option><option>Dairy</option><option>Liquids</option><option>Organic</option></select></div><div class="field"><label>Selling price ₹</label><input id="newPrice" type="number" min="1" placeholder="32"></div><div class="field"><label>Market reference ₹</label><input id="newMarket" type="number" min="1" placeholder="45"></div><div class="field"><label>Available quantity</label><input id="newStock" type="number" min="0" step="0.1" placeholder="100"></div><div class="field"><label>Unit</label><select id="newUnit"><option>kg</option><option>g</option><option>unit</option><option>L</option><option>ml</option><option>pack</option><option>bag</option><option>crate</option><option>dozen</option></select></div><div class="field"><label>Variety (optional)</label><input id="newVariety" maxlength="100" placeholder="Tomato variety"></div><div class="field"><label>Grade (optional)</label><select id="newGrade"><option value="">Not specified</option><option>Grade A</option><option>Grade B</option><option>Grade C</option></select></div><div class="field"><label>Harvest date</label><input id="newHarvestDate" type="date"></div><div class="field"><label>Available until (optional)</label><input id="newAvailableUntil" type="date"></div><div class="field full"><label>Description (optional)</label><textarea id="newDescription" rows="2" maxlength="1000" placeholder="Produce details, quality notes and handling..."></textarea></div><div class="field"><label>Farm village (optional)</label><input id="newVillage" maxlength="100" placeholder="Village"></div><div class="field"><label>District (optional)</label><input id="newDistrict" maxlength="100" placeholder="District"></div><div class="field"><label>Farm pincode (optional)</label><input id="newPincode" maxlength="6" inputmode="numeric" placeholder="641001"></div><div class="field"><label>Delivery estimate (minutes)</label><input id="newDeliveryMinutes" type="number" min="0" max="10080" value="120"></div><div class="field full"><label>Product photo (camera or gallery)</label><input id="newImageFile" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onchange="previewNewProductImage(event)"><div id="newImagePreview" class="product-image-preview">No photo selected yet.</div></div><div class="field full"><label><input id="newOrganic" type="checkbox"> This produce is organically grown (select only when supportable)</label></div></div><div class="modal-actions"><button class="btn btn-light" onclick="closeModals()">Cancel</button><button class="btn btn-primary" onclick="addProduct()">Publish product</button></div></div></div>
-<div class="overlay" id="addressModal"><div class="modal"><div class="modal-head"><h3>Add delivery address</h3><button class="close" onclick="closeModals()">×</button></div><div class="form-grid"><div class="field"><label>Label</label><select id="addrLabel"><option>Home</option><option>Work</option><option>Other</option></select></div><div class="field"><label>Full name</label><input id="addrName" autocomplete="name" placeholder="Your name"></div><div class="field"><label>Mobile</label><input id="addrMobile" inputmode="numeric" maxlength="10" autocomplete="tel" placeholder="10-digit mobile"></div><div class="field"><label>Pincode</label><input id="addrPin" inputmode="numeric" maxlength="6" placeholder="641001"></div><div class="field full"><label>House / Street / Area</label><textarea id="addrText" rows="3" placeholder="House number, street, area"></textarea></div><div class="field"><label>City</label><input id="addrCity" placeholder="Coimbatore"></div><div class="field"><label>State</label><input id="addrState" placeholder="Tamil Nadu"></div></div><div class="modal-actions"><button class="btn btn-light" onclick="closeModals()">Cancel</button><button class="btn btn-primary" onclick="saveAddress()">Save address</button></div></div></div>
+<div class="overlay" id="addressModal"><div class="modal"><div class="modal-head"><h3>Add delivery address</h3><button class="close" onclick="closeModals()">×</button></div><div class="form-grid"><div class="field"><label>Label</label><select id="addrLabel"><option>Home</option><option>Work</option><option>Other</option></select></div><div class="field"><label>Full name</label><input id="addrName" autocomplete="name" placeholder="Your name"></div><div class="field"><label>Mobile</label><input id="addrMobile" inputmode="numeric" maxlength="10" autocomplete="tel" placeholder="10-digit mobile"></div><div class="field"><label>Email (required for courier booking)</label><input id="addrEmail" type="email" maxlength="254" autocomplete="email" placeholder="name@example.com"></div><div class="field"><label>Pincode</label><input id="addrPin" inputmode="numeric" maxlength="6" placeholder="641001"></div><div class="field full"><label>House / Street / Area</label><textarea id="addrText" rows="3" placeholder="House number, street, area"></textarea></div><div class="field"><label>City</label><input id="addrCity" placeholder="Coimbatore"></div><div class="field"><label>State</label><input id="addrState" placeholder="Tamil Nadu"></div></div><div class="modal-actions"><button class="btn btn-light" onclick="closeModals()">Cancel</button><button class="btn btn-primary" onclick="saveAddress()">Save address</button></div></div></div>
 <div class="overlay" id="farmerModal"><div class="modal"><div class="modal-head"><h3>Farm details & verification request</h3><button class="close" onclick="closeModals()">×</button></div><p class="small" style="margin-top:4px">Use accurate farm information. AgriNex will mark the application as pending until an administrator reviews it.</p><div class="form-grid"><div class="field"><label>Farmer name</label><input id="farmName" placeholder="Your full name"></div><div class="field"><label>Farm name</label><input id="farmBusiness" placeholder="Green Leaf Farm"></div><div class="field"><label>Village</label><input id="farmVillage" maxlength="100" placeholder="Village / town"></div><div class="field"><label>District</label><input id="farmDistrict" maxlength="100" placeholder="District"></div><div class="field"><label>Farm pincode</label><input id="farmPin" maxlength="6" inputmode="numeric" placeholder="641001"></div><div class="field"><label>Farm type</label><select id="farmType"><option value="">Select farm type</option><option>Individual farmer</option><option>FPO member</option><option>Cooperative member</option><option>Tenant farmer</option><option>Other</option></select></div><div class="field full"><label>Farm address / location details</label><textarea id="farmAddress" rows="2" maxlength="300" placeholder="Farm address or directions (do not enter bank details)"></textarea></div><div class="field full"><label>Farm description</label><textarea id="farmDescription" rows="2" maxlength="1000" placeholder="What do you grow? What seasons or produce do you supply?"></textarea></div><div class="field full"><label>Preferred language</label><select id="farmLanguage"><option value="ta">தமிழ்</option><option value="en">English</option></select></div></div><div class="modal-actions"><button class="btn btn-light" onclick="closeModals()">Cancel</button><button class="btn btn-primary" onclick="submitFarmer()">Save & submit for review</button></div></div></div>
 <div class="ff-drawer" id="miniCartDrawer" aria-hidden="true"><div class="ff-drawer-head"><div><b>🛒 Quick cart</b><div class="ff-muted">Review items without leaving the marketplace.</div></div><button class="close" onclick="closeInnovationDrawers()">×</button></div><div class="ff-drawer-body" id="miniCartBody"></div></div>
 <div class="ff-drawer" id="smartBasketDrawer" aria-hidden="true"><div class="ff-drawer-head"><div><b>🧠 Smart Basket</b><div class="ff-muted">A faster way to build a useful weekly basket.</div></div><button class="close" onclick="closeInnovationDrawers()">×</button></div><div class="ff-drawer-body" id="smartBasketBody"></div></div>
@@ -1050,8 +1050,8 @@ storage.set('ff_products',products);
 let recentSearches=storage.get('ff_recent_searches',[])||[];
 let currentUser=storage.get('ff_user',null);
 let cart=[];let wish=[];
-let addresses=[{label:'Home',name:'',mobile:'',text:'123 Green Valley Road, Coimbatore',city:'Coimbatore',state:'Tamil Nadu',pin:'641001'}];
-let currentCategory='All';let checkoutStep=1;let selectedAddress=0;let selectedPayment='UPI';let trackingIndex=0;
+let addresses=[];
+let currentCategory='All';let checkoutStep=1;let selectedAddress=0;let selectedPayment='COD';let trackingIndex=0;
 const defaultNotifications=[{icon:'🚚',title:'Order on the way',text:'Order #FF10261 is expected to arrive today.',unread:true},{icon:'💰',title:'Price update',text:'Tomato demand near you increased 8%.',unread:true},{icon:'📦',title:'Inventory warning',text:'Organic carrots have 18 kg left.',unread:true},{icon:'✅',title:'Farmer verified',text:'Green Leaf Farm completed farm verification.',unread:false}];
 let notifications=storage.get('ff_notifications',[])||[];
 let reviews=storage.get('ff_reviews',[])||[];
@@ -2840,12 +2840,13 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
 
   window.saveAddress=async function(){
     const label=$('addrLabel')?.value||'Home',name=$('addrName')?.value.trim()||'',mobile=$('addrMobile')?.value.trim()||'',
-      line1=$('addrText')?.value.trim()||'',city=$('addrCity')?.value.trim()||'',state=$('addrState')?.value.trim()||'',pincode=$('addrPin')?.value.trim()||'';
+      email=$('addrEmail')?.value.trim()||'',line1=$('addrText')?.value.trim()||'',city=$('addrCity')?.value.trim()||'',state=$('addrState')?.value.trim()||'',pincode=$('addrPin')?.value.trim()||'';
     if(!name||line1.length<5||!city||!state||!/^[0-9]{10}$/.test(mobile)||!/^[0-9]{6}$/.test(pincode)){toast('Enter name, valid 10-digit mobile, full address, city, state and 6-digit pincode.');return;}
+    if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){toast('Enter a valid email address.');return;}
     if(!isCustomer()){window.openAuthPortal?.('customer');toast('Sign in as a customer before saving a delivery address.');return;}
     try{
-      const row=await api()('/api/addresses',{method:'POST',body:JSON.stringify({label,recipient_name:name,mobile,line1,city,state,pincode})});
-      addresses.push({id:row.id,label,name,mobile,text:line1,city,state,pin:pincode});
+      const row=await api()('/api/addresses',{method:'POST',body:JSON.stringify({label,recipient_name:name,mobile,email:email||null,line1,city,state,pincode})});
+      addresses.push({id:row.id,label,name,mobile,email,text:line1,city,state,pin:pincode});
       selectedAddress=addresses.length-1;persist();closeModals();renderCheckout();toast('Delivery address saved.');
     }catch(e){toast(e.message||'Address could not be saved.');}
   };
@@ -2862,15 +2863,31 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
         panel.innerHTML='<h3>Sign in to continue</h3><p class="small">Save your own delivery address to place an order.</p><button class="btn btn-primary" style="margin-top:12px" onclick="openAuthPortal(&quot;customer&quot;)">Sign in as customer</button>';
         return;
       }
-      panel.innerHTML='<h3>Delivery address</h3><div class="address-grid">'+(addresses||[]).map((a,i)=>'<div class="address-card '+(i===selectedAddress?'sel':'')+'" onclick="selectedAddress='+i+';renderCheckout()"><b>📍 '+esc(a.label)+'</b><p class="small" style="margin-top:4px">'+esc(a.name)+' · '+esc(a.mobile)+'<br>'+esc(a.text)+', '+esc(a.city)+', '+esc(a.state)+' · '+esc(a.pin)+'</p></div>').join('')+'</div>'+(addresses.length?'':'<div class="api-note">You have not saved a delivery address yet.</div>')+'<button class="btn btn-light" style="margin-top:10px" onclick="openModal(&quot;addressModal&quot;)">＋ Add delivery address</button><div class="modal-actions"><button class="btn btn-light" onclick="checkoutStep=1;renderCheckout()">← Back</button><button class="btn btn-primary" '+(addresses.length?'':'disabled')+' onclick="checkoutStep=3;renderCheckout()">Continue →</button></div>';
+      panel.innerHTML='<h3>Delivery address</h3><div class="address-grid">'+(addresses||[]).map((a,i)=>'<div class="address-card '+(i===selectedAddress?'sel':'')+'" onclick="selectedAddress='+i+';renderCheckout()"><b>📍 '+esc(a.label)+'</b><p class="small" style="margin-top:4px">'+esc(a.name)+' · '+esc(a.mobile)+'<br>'+esc(a.text)+', '+esc(a.city)+', '+esc(a.state)+' · '+esc(a.pin)+(a.email?'<br>'+esc(a.email):'')+'</p></div>').join('')+'</div>'+(addresses.length?'':'<div class="api-note">You have not saved a delivery address yet.</div>')+'<div class="api-note">Add an email address to delivery details if you may book a courier shipment later.</div><button class="btn btn-light" style="margin-top:10px" onclick="openModal(&quot;addressModal&quot;)">＋ Add delivery address</button><div class="modal-actions"><button class="btn btn-light" onclick="checkoutStep=1;renderCheckout()">← Back</button><button class="btn btn-primary" '+(addresses.length?'':'disabled')+' onclick="checkoutStep=3;renderCheckout()">Continue →</button></div>';
       return;
     }
     if(checkoutStep===3){
-      panel.innerHTML='<h3>Payment method</h3><div class="pay-option sel"><b>Cash on Delivery</b><span class="small" style="float:right">Available for pilot orders</span></div><div class="api-note">Online payments are not enabled yet. No payment is collected in this prototype. For COD, the collection status stays pending until it is confirmed separately.</div><div class="modal-actions"><button class="btn btn-light" onclick="checkoutStep=2;renderCheckout()">← Back</button><button class="btn btn-primary" onclick="placeOrder()">Place COD order →</button></div>';
+      const razorpayOption=window.ffPaymentConfiguration?.razorpayTest
+        ? '<div class="pay-option '+(selectedPayment==='RAZORPAY_TEST'?'sel':'')+'" onclick="selectedPayment=\'RAZORPAY_TEST\';renderCheckout()"><b>Razorpay · Test mode</b><span class="small" style="display:block;margin-top:4px">Test transactions only. No real money is collected.</span></div>'
+        : '';
+      const codSelected=selectedPayment==='COD';
+      panel.innerHTML='<h3>Payment method</h3><div class="pay-grid"><div class="pay-option '+(codSelected?'sel':'')+'" onclick="selectedPayment=\'COD\';renderCheckout()"><b>Cash on Delivery</b><span class="small" style="display:block;margin-top:4px">Collection must be confirmed separately.</span></div>'+razorpayOption+'</div><div class="api-note">'+(window.ffPaymentConfiguration?.razorpayTest?'Razorpay is connected in test mode only.':'Online gateway checkout is hidden until test credentials and a server-side verification key are configured.')+' A payment is never considered successful until the server verifies the provider signature and captured transaction.</div><div class="modal-actions"><button class="btn btn-light" onclick="checkoutStep=2;renderCheckout()">← Back</button><button class="btn btn-primary" onclick="placeOrder()">'+(codSelected?'Place COD order →':'Continue to test payment →')+'</button></div>';
       return;
     }
     panel.innerHTML='<div style="text-align:center;padding:24px 10px"><div style="font-size:52px">✅</div><h2>Order sent to the farmer</h2><p class="small" style="margin-top:7px">Your order has been recorded. The farmer must confirm it before preparation begins.</p><div class="api-note" style="margin-top:15px">Order '+esc(window.ffLastOrderNumber||'')+' · Payment: Cash on Delivery · Collection pending</div><button class="btn btn-primary" style="margin-top:15px" onclick="showPage(&quot;orders&quot;)">View my orders</button></div>';
   };
+
+  async function loadRazorpayCheckoutScript(){
+    if(window.Razorpay)return true;
+    await new Promise((resolve,reject)=>{
+      const script=document.createElement('script');
+      script.src='https://checkout.razorpay.com/v1/checkout.js';
+      script.onload=resolve;
+      script.onerror=()=>reject(new Error('Could not load the payment checkout. No payment was made.'));
+      document.head.appendChild(script);
+    });
+    return Boolean(window.Razorpay);
+  }
 
   window.placeOrder=async function(){
     if(!cart.length){toast('Your cart is empty.');return;}
@@ -2879,16 +2896,88 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
     if(!address?.id){checkoutStep=2;renderCheckout();toast('Choose or save a delivery address first.');return;}
     const items=cart.map(c=>({product_id:c.serverId||String(c.id||'').replace(/^api-/,''),quantity:Number(c.qty)}));
     if(items.some(x=>!x.product_id||!Number.isFinite(x.quantity)||x.quantity<=0)){toast('Your cart contains an invalid product. Refresh the cart and try again.');return;}
-    const button=$('#checkoutPanel .btn-primary');if(button){button.disabled=true;button.textContent='Placing order…';}
+    const paymentMethod=selectedPayment==='RAZORPAY_TEST'?'razorpay':'cash_on_delivery';
+    if(paymentMethod==='razorpay'&&!window.ffPaymentConfiguration?.razorpayTest){
+      toast('Razorpay test mode is not configured. Choose Cash on Delivery.');return;
+    }
+    const button=$('#checkoutPanel .btn-primary');
+    if(button){button.disabled=true;button.textContent=paymentMethod==='razorpay'?'Creating secure test payment…':'Placing COD order…';}
+    let orderCreated=false;
     try{
-      const result=await api()('/api/orders',{method:'POST',body:JSON.stringify({items,address_id:address.id,payment_method:'cash_on_delivery'})});
+      const result=await api()('/api/orders',{
+        method:'POST',
+        body:JSON.stringify({items,address_id:address.id,payment_method:paymentMethod})
+      });
       const created=result.orders||[];
+      if(!created.length)throw new Error('The server did not return a saved order.');
       window.ffLastOrderNumber=created.map(x=>x.order_number).filter(Boolean).join(', ');
-      await Promise.all([window.ffBackend?.syncCart?.(),window.ffBackend?.syncOrders?.(),loadPublicProducts(),window.ffBackend?.syncNotifications?.()]);
+      orderCreated=true;
+
+      if(paymentMethod==='razorpay'){
+        if(created.length!==1||!result.payment?.razorpay_order_id){
+          throw new Error('Online test checkout currently supports one farmer per order. The saved order needs payment review; do not place it again.');
+        }
+        await loadRazorpayCheckoutScript();
+        const p=result.payment;
+        await new Promise((resolve,reject)=>{
+          let finished=false;
+          const rzp=new Razorpay({
+            key:p.key_id,
+            order_id:p.razorpay_order_id,
+            amount:p.amount_paise,
+            currency:p.currency||'INR',
+            name:'AgriNex',
+            description:'Test payment for '+(created[0].order_number||'AgriNex order'),
+            prefill:{name:currentUser?.name||'',contact:currentUser?.contact||''},
+            notes:{agrinex_order_id:created[0].id},
+            handler:async response=>{
+              if(finished)return;
+              finished=true;
+              try{
+                await api()('/api/payments/razorpay/verify',{
+                  method:'POST',
+                  body:JSON.stringify({
+                    order_id:created[0].id,
+                    razorpay_order_id:response.razorpay_order_id,
+                    razorpay_payment_id:response.razorpay_payment_id,
+                    razorpay_signature:response.razorpay_signature
+                  })
+                });
+                resolve();
+              }catch(e){reject(e);}
+            },
+            modal:{ondismiss:()=>{
+              if(finished)return;
+              finished=true;
+              reject(new Error('Checkout was closed. Payment is not confirmed. Refresh Orders before trying again; do not submit a duplicate order.'));
+            }}
+          });
+          rzp.on('payment.failed',event=>{
+            if(finished)return;
+            finished=true;
+            reject(new Error(event?.error?.description||'The test payment failed. Check Orders for the latest verified status.'));
+          });
+          rzp.open();
+        });
+      }
+
+      await Promise.allSettled([
+        window.ffBackend?.syncCart?.(),
+        window.ffBackend?.syncOrders?.(),
+        loadPublicProducts(),
+        window.ffBackend?.syncNotifications?.()
+      ]);
       cart=[];persist();updateBadges();checkoutStep=4;renderCheckout();
-      toast('COD order recorded. Waiting for farmer confirmation.');
-    }catch(e){toast(e.message||'The order could not be placed. Check stock and try again.');}
-    finally{if(button){button.disabled=false;button.textContent='Place COD order →';}}
+      toast(paymentMethod==='razorpay'?'Test payment verified by the server.':'COD order recorded. Waiting for farmer confirmation.');
+    }catch(e){
+      if(orderCreated){
+        window.ffLastPaymentPending=paymentMethod==='razorpay';
+        await Promise.allSettled([window.ffBackend?.syncOrders?.(),window.ffBackend?.syncNotifications?.()]);
+      }
+      toast(e.message||'Checkout could not be completed. Check your order history before retrying.');
+    }finally{
+      if(button){button.disabled=false;button.textContent=selectedPayment==='RAZORPAY_TEST'?'Continue to test payment →':'Place COD order →';}
+    }
   };
 
   window.renderFarmerOrdersTable=window.renderFarmerOrdersTable;
@@ -2900,8 +2989,25 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
   // The original API boot restores the stored user after DOMContentLoaded.
   // Re-read the authenticated profile after that boot so a returning farmer
   // sees live inventory, orders and earnings on the first screen load.
+  window.ffPaymentConfiguration={razorpayTest:false};
+  window.refreshIntegrationConfiguration=async function(){
+    try{
+      const health=await api()('/api/marketplace/health');
+      window.ffPaymentConfiguration.razorpayTest=Boolean(
+        health.integrations?.razorpay?.configured && health.integrations?.razorpay?.mode==='test'
+      );
+      window.ffPaymentConfiguration.whatsapp=Boolean(health.integrations?.whatsapp?.configured);
+      window.ffPaymentConfiguration.shiprocket=Boolean(
+        health.integrations?.shiprocket?.configured && health.integrations?.shiprocket?.booking_allowed
+      );
+    }catch(_){
+      window.ffPaymentConfiguration={razorpayTest:false,whatsapp:false,shiprocket:false};
+    }
+    if(checkoutStep===3)window.renderCheckout?.();
+  };
   window.addEventListener('load',async function(){
     try{await window.ffBackend?.boot?.();}catch(_){}
+    await window.refreshIntegrationConfiguration();
     if(isFarmer())await loadFarmerDashboard();
     if($('bulkMarketplace')&&token())await loadBulkMarketplace();
     if(!token())await loadPublicProducts().catch(()=>{});
