@@ -3,6 +3,7 @@ import re
 import base64
 import binascii
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal
 from urllib.parse import urlencode, quote
@@ -176,6 +177,7 @@ def session_response(access_token: str, profile: dict) -> dict:
         "access_token": access_token,
         "token_type": "bearer",
         "user": {
+            "id": profile["id"],
             "name": profile["full_name"],
             "phone": profile["phone"],
             "role": profile["role"],
@@ -301,6 +303,7 @@ async def me(authorization: str | None = Header(default=None)):
     access_token = require_bearer(authorization)
     profile = await user_profile(access_token)
     return {
+        "id": profile["id"],
         "name": profile["full_name"],
         "phone": profile["phone"],
         "role": profile["role"],
@@ -308,11 +311,6 @@ async def me(authorization: str | None = Header(default=None)):
         "farmer_status": profile["farmer_status"],
     }
 
-
-if __name__ == "__main__":
-    import uvicorn
-
-    uvicorn.run("index:app", host="0.0.0.0", port=int(os.getenv("PORT", "8000")), reload=True)
 
 
 # --- AgriNex farmer-first marketplace API ---
@@ -525,7 +523,7 @@ async def update_profile(body: ProfileUpdateRequest, authorization: str | None =
         return profile
     if "farm_pincode" in changes and not re.fullmatch(r"[0-9]{6}", changes["farm_pincode"] or ""):
         raise HTTPException(status_code=422, detail="Enter a valid 6-digit farm pincode.")
-    changes["updated_at"] = "now()"
+    changes["updated_at"] = datetime.now(timezone.utc).isoformat()
     rows = await supabase_request(
         "PATCH", "/rest/v1/agrinex_profiles",
         access_token=token,
@@ -549,8 +547,8 @@ async def submit_farmer_verification(body: ProfileUpdateRequest, authorization: 
         r"[0-9]{6}", fields.get("farm_pincode", profile.get("farm_pincode", "")) or ""
     ):
         raise HTTPException(status_code=422, detail="Enter your farm pincode.")
-    fields["verification_submitted_at"] = "now()"
-    fields["updated_at"] = "now()"
+    fields["verification_submitted_at"] = datetime.now(timezone.utc).isoformat()
+    fields["updated_at"] = datetime.now(timezone.utc).isoformat()
     await supabase_request(
         "PATCH", "/rest/v1/agrinex_profiles",
         access_token=token, params={"id": f"eq.{profile['id']}"},
@@ -1002,4 +1000,7 @@ async def marketplace_health():
             "online_payments_enabled": False,
             "sms_provider_configured": False}
 
+if __name__ == "__main__":
+    import uvicorn
 
+    uvicorn.run("index:app", host="0.0.0.0", port=int(os.getenv("PORT", "8000")), reload=True)
