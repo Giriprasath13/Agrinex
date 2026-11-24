@@ -1060,9 +1060,14 @@ function productDetailRelatedCard(p){
 let productDetailsReturnPage="marketplace";
 function openProductDetails(id){
  const p=products.find(x=>x.id===id);if(!p)return;
- if(!$("productDetailsPage")?.classList.contains("active")){const activePage=document.querySelector(".page.active");productDetailsReturnPage=activePage?.id&&activePage.id!=="productDetailsPage"?activePage.id:"marketplace";}
+ if(!$("productDetailsPage")?.classList.contains("active")){
+   if(location.hash.startsWith("#product/")) productDetailsReturnPage=history.state?.agrinexReturnPage||"marketplace";
+   else {const activePage=document.querySelector(".page.active");productDetailsReturnPage=activePage?.id&&activePage.id!=="productDetailsPage"?activePage.id:"marketplace";}
+ }
  const rs=getProductReviews(id);const rating=getProductRating(id);const marketSave=Math.max(0,Number(p.market||0)-Number(p.price||0));const percentSave=p.market>0?Math.max(0,Math.round((1-p.price/p.market)*100)):0;const guide=getProductGuide(p);const related=getRelatedProducts(p);
  const encodedId=encodeURIComponent(String(p.id)).replace(/'/g,"%27");const encodedFarmer=encodeURIComponent(String(p.farmer||"")).replace(/'/g,"%27");
+ const productRoute="#product/"+encodedId;
+ if(location.hash!==productRoute) history.pushState({agrinexProduct:true,productId:String(p.id),agrinexReturnPage:productDetailsReturnPage}, "", productRoute);
  const image=p.image?'<img src="'+safe(p.image)+'" alt="'+safe(p.name)+'" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'grid\'">':"";
  const fallback=p.image?"":"style=\"display:grid\"";
  const reviewMarkup=rs.length?rs.map(r=>'<article class="pd-review"><strong>⭐ '+safe(r.rating)+'/5 • Verified purchase</strong><p>'+safe(r.comment)+'</p><small>'+safe(new Date(r.date).toLocaleDateString("en-IN"))+'</small></article>').join(""):'<p class="small">No customer reviews yet. Verified-purchase reviews will appear here.</p>';
@@ -1088,7 +1093,7 @@ function openProductDetails(id){
  $("productDetailsPageContent").innerHTML=html;
  showPage("productDetailsPage");
 }
-function closeProductDetails(){if($('productDetailsPage')?.classList.contains('active')){showPage(productDetailsReturnPage||'marketplace');return}$('productDetailsModal').classList.remove('show');$('productDetailsModal').setAttribute('aria-hidden','true')}
+function closeProductDetails(){if($('productDetailsPage')?.classList.contains('active')){if(location.hash.startsWith('#product/')){history.back();return}showPage(productDetailsReturnPage||'marketplace');return}$('productDetailsModal').classList.remove('show');$('productDetailsModal').setAttribute('aria-hidden','true')}
 function productCard(p){const pid=p.id;const save=Math.max(0,Math.round((1-p.price/p.market)*100));const rupeeSave=Math.max(0,p.market-p.price);const low=p.stock<=20;return `<div class="card product-card"><div class="product-img"><span class="pill">${p.organic?'🌱 ORGANIC':'FRESH TODAY'}</span><button class="heart" aria-label="Wishlist" onclick="toggleWish('${pid}')">${wish.includes(pid)?'❤️':'♡'}</button>${p.image?`<img src="${safe(p.image)}" alt="${safe(p.name)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='grid'"><div class="image-fallback">${p.emoji}</div>`:`<div class="image-fallback" style="display:grid">${p.emoji}</div>`}</div><div class="product-info"><h3>${safe(p.name)}</h3><div class="farmer">👨‍🌾 ${safe(p.farmer)} ${p.verified?'<span class="verified-mark">✓ Verified</span>':''}</div><div class="product-proof">${p.verified?'<span class="proof-badge">✓ Verified Farmer</span>':''}${p.organic?'<span class="proof-badge org">🌱 Organic</span>':''}<span class="proof-badge">🚚 ${safe(p.delivery)}</span></div><div class="meta"><span>${getProductRating(p.id)?'⭐ '+getProductRating(p.id).toFixed(1):'☆ New'}</span><span>📍 ${p.distance} km</span><span>🌾 ${safe(p.fresh)}</span></div><div class="price-row"><span class="price">₹${p.price}/${p.unit||'unit'}</span><span class="old">₹${p.market}</span><span class="save">Save ${save}%</span></div><div class="product-saving">💚 You save ₹${rupeeSave} vs market price before checkout</div><div class="stock ${low?'low':'ok'}">${p.stock===0?'❌ Out of stock':low?'⚠️ Only '+p.stock+' '+(p.unit||'units')+' left':'✓ '+p.stock+' '+(p.unit||'units')+' available'}</div><div class="card-actions"><button class="btn btn-primary" ${p.stock===0?'disabled':''} onclick="addToCartById('${pid}')">Add to cart</button><button class="btn btn-light" onclick="openProductDetails('${pid}')">Details</button></div></div></div>`}
 function toggleMobileMenu(){const m=$('mobileMenu');if(m)m.classList.toggle('show')}
 function menuGo(id){toggleMobileMenu();showPage(id)}
@@ -2178,6 +2183,27 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
   window.addEventListener('unhandledrejection', function(e){
     if(standalone && e && e.reason) { e.preventDefault(); console.warn('Standalone mode handled promise rejection:', e.reason); }
   });
+})();
+</script>
+
+
+<script id="agrinex-product-page-routing">
+(function(){
+ function restoreProductRoute(){
+  const match=location.hash.match(/^#product\/(.+)$/);
+  if(match){
+   let id;
+   try{id=decodeURIComponent(match[1])}catch(_){id=match[1]}
+   if(products.some(p=>String(p.id)===String(id))){
+    if(!$("productDetailsPage")?.classList.contains("active")) productDetailsReturnPage=history.state?.agrinexReturnPage||"marketplace";
+    openProductDetails(id);
+    return;
+   }
+  }
+  if($("productDetailsPage")?.classList.contains("active")) showPage(productDetailsReturnPage||"marketplace");
+ }
+ window.addEventListener("popstate",restoreProductRoute);
+ if(location.hash.startsWith("#product/")) restoreProductRoute();
 })();
 </script>
 
