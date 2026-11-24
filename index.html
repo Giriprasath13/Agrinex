@@ -577,6 +577,22 @@
 }
 </style>
 
+
+<style id="agrinex-product-detail-separate-page">
+#productDetailsPage{min-height:calc(100vh - 130px);background:#f7faf7;border:1px solid #e6eee8;border-radius:22px;overflow:hidden}
+#productDetailsPage .product-detail-head{position:relative;top:auto;z-index:1;padding:18px clamp(16px,3vw,30px);border-bottom:1px solid #e3ebe5;background:#fff}
+#productDetailsPage .product-detail-head h3{font-size:20px}
+#productDetailsPage .product-detail-close{width:auto;min-width:88px;height:40px;padding:0 13px;border-radius:11px;font-size:12px;font-weight:850;display:flex;align-items:center;justify-content:center;gap:7px}
+#productDetailsPage .product-detail-body{max-width:1240px;margin:0 auto;padding:clamp(15px,3vw,30px)}
+#productDetailsPage .product-detail-grid{grid-template-columns:minmax(0,1fr) minmax(340px,.95fr)}
+#productDetailsPage .product-detail-section{margin-top:24px}
+@media(max-width:760px){
+ #productDetailsPage{min-height:100vh;border-radius:0;border-left:0;border-right:0}
+ #productDetailsPage .product-detail-head{padding:14px 15px}
+ #productDetailsPage .product-detail-body{padding:14px}
+ #productDetailsPage .product-detail-grid{grid-template-columns:1fr}
+}
+</style>
 </head>
 <body>
 <div class="app">
@@ -619,6 +635,7 @@
   </div>
 
   <main class="main">
+    <section class="page product-detail-page" id="productDetailsPage"><div id="productDetailsPageContent"></div></section>
     <section class="page active" id="home">
       <div class="hero"><div class="hero-copy"><span class="eyebrow">🌱 Farmer-direct marketplace</span><h1>Fresh food.<br><span>Fairer prices.</span><br>Closer to home.</h1><p>Shop from verified farmers, understand the price you pay, and move from discovery to delivery with fewer steps. Smart basket tools help you buy better and help farmers sell smarter.</p><div class="hero-actions"><button class="btn btn-primary" onclick="showPage('marketplace')">Shop fresh produce →</button><button class="btn btn-soft" onclick="showPage('farmer')">👨‍🌾 Sell your harvest</button></div></div><div class="hero-art"><div class="hero-bubble">Today on AgriNex<br><b id="heroListingCount">0 live listings</b><br><span class="small">Freshness, stock and savings are shown clearly</span></div></div></div>
       <section class="innovation-grid" aria-label="AgriNex advantages">
@@ -1040,8 +1057,10 @@ function productDetailRelatedCard(p){
  const fallback=p.image?"":"style=\"display:grid\"";
  return '<article class="pd-related-card"><button class="pd-related-main" onclick="openProductDetails(decodeURIComponent(\''+encodedId+'\'))"><div class="pd-related-image">'+image+'<div class="pd-related-emoji" '+fallback+'>'+safe(p.emoji||"🥬")+'</div></div><div class="pd-related-copy"><strong>'+safe(p.name)+'</strong><span>₹'+Number(p.price||0)+'/'+safe(p.unit||"unit")+' • '+safe(p.farmer||"Local farmer")+'</span><small>'+(p.verified?"✓ Verified farmer":"Fresh listing")+' • '+safe(p.distance||"—")+' km away</small></div></button><div class="pd-related-actions"><button class="btn btn-light" onclick="openProductDetails(decodeURIComponent(\''+encodedId+'\'))">View details</button><button class="btn btn-primary" '+(Number(p.stock)>0?"":"disabled")+' onclick="addToCartById(decodeURIComponent(\''+encodedId+'\'))">Add</button></div></article>';
 }
+let productDetailsReturnPage="marketplace";
 function openProductDetails(id){
  const p=products.find(x=>x.id===id);if(!p)return;
+ if(!$("productDetailsPage")?.classList.contains("active")){const activePage=document.querySelector(".page.active");productDetailsReturnPage=activePage?.id&&activePage.id!=="productDetailsPage"?activePage.id:"marketplace";}
  const rs=getProductReviews(id);const rating=getProductRating(id);const marketSave=Math.max(0,Number(p.market||0)-Number(p.price||0));const percentSave=p.market>0?Math.max(0,Math.round((1-p.price/p.market)*100)):0;const guide=getProductGuide(p);const related=getRelatedProducts(p);
  const encodedId=encodeURIComponent(String(p.id)).replace(/'/g,"%27");const encodedFarmer=encodeURIComponent(String(p.farmer||"")).replace(/'/g,"%27");
  const image=p.image?'<img src="'+safe(p.image)+'" alt="'+safe(p.name)+'" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'grid\'">':"";
@@ -1049,7 +1068,7 @@ function openProductDetails(id){
  const reviewMarkup=rs.length?rs.map(r=>'<article class="pd-review"><strong>⭐ '+safe(r.rating)+'/5 • Verified purchase</strong><p>'+safe(r.comment)+'</p><small>'+safe(new Date(r.date).toLocaleDateString("en-IN"))+'</small></article>').join(""):'<p class="small">No customer reviews yet. Verified-purchase reviews will appear here.</p>';
  const relatedMarkup=related.length?related.map(productDetailRelatedCard).join(""):'<p class="small">No similar products are available right now. Browse the marketplace for more fresh produce.</p>';
  const html=[
- '<div class="product-detail-head"><div><span class="product-detail-eyebrow">AGRINEX • PRODUCT DETAILS</span><h3>'+safe(p.name)+'</h3></div><button class="product-detail-close" aria-label="Close product details" onclick="closeProductDetails()">×</button></div>',
+ '<div class="product-detail-head"><div><span class="product-detail-eyebrow">AGRINEX • PRODUCT DETAILS</span><h3>'+safe(p.name)+'</h3></div><button class="product-detail-close" aria-label="Back to previous page" onclick="closeProductDetails()">← Back</button></div>',
  '<div class="product-detail-body">',
  '<div class="product-detail-grid">',
  '<div class="product-detail-visual"><div class="product-detail-image">'+image+'<div class="image-fallback" '+fallback+'>'+safe(p.emoji||"🥬")+'</div><span class="product-detail-badge">'+(p.organic?"🌱 ORGANIC":"🌿 FRESH PRODUCE")+'</span></div><div class="pd-farmer-card"><div class="pd-farmer-icon">👨‍🌾</div><div><strong>'+safe(p.farmer||"Local farmer")+'</strong><span>'+(p.verified?"✓ Verified farmer":"Farmer verification not shown")+'</span></div><span class="pd-farmer-distance">📍 '+safe(p.distance||"—")+' km</span></div></div>',
@@ -1066,11 +1085,10 @@ function openProductDetails(id){
  '<div class="product-detail-footer">Listing details such as price, quantity, harvest status and delivery window are supplied by the seller and may change before checkout.</div>',
  '</div>'
  ].join("");
- $("productDetailsContent").innerHTML=html;
- $("productDetailsModal").classList.add("show");
- $("productDetailsModal").setAttribute("aria-hidden","false");
+ $("productDetailsPageContent").innerHTML=html;
+ showPage("productDetailsPage");
 }
-function closeProductDetails(){$('productDetailsModal').classList.remove('show');$('productDetailsModal').setAttribute('aria-hidden','true')}
+function closeProductDetails(){if($('productDetailsPage')?.classList.contains('active')){showPage(productDetailsReturnPage||'marketplace');return}$('productDetailsModal').classList.remove('show');$('productDetailsModal').setAttribute('aria-hidden','true')}
 function productCard(p){const pid=p.id;const save=Math.max(0,Math.round((1-p.price/p.market)*100));const rupeeSave=Math.max(0,p.market-p.price);const low=p.stock<=20;return `<div class="card product-card"><div class="product-img"><span class="pill">${p.organic?'🌱 ORGANIC':'FRESH TODAY'}</span><button class="heart" aria-label="Wishlist" onclick="toggleWish('${pid}')">${wish.includes(pid)?'❤️':'♡'}</button>${p.image?`<img src="${safe(p.image)}" alt="${safe(p.name)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='grid'"><div class="image-fallback">${p.emoji}</div>`:`<div class="image-fallback" style="display:grid">${p.emoji}</div>`}</div><div class="product-info"><h3>${safe(p.name)}</h3><div class="farmer">👨‍🌾 ${safe(p.farmer)} ${p.verified?'<span class="verified-mark">✓ Verified</span>':''}</div><div class="product-proof">${p.verified?'<span class="proof-badge">✓ Verified Farmer</span>':''}${p.organic?'<span class="proof-badge org">🌱 Organic</span>':''}<span class="proof-badge">🚚 ${safe(p.delivery)}</span></div><div class="meta"><span>${getProductRating(p.id)?'⭐ '+getProductRating(p.id).toFixed(1):'☆ New'}</span><span>📍 ${p.distance} km</span><span>🌾 ${safe(p.fresh)}</span></div><div class="price-row"><span class="price">₹${p.price}/${p.unit||'unit'}</span><span class="old">₹${p.market}</span><span class="save">Save ${save}%</span></div><div class="product-saving">💚 You save ₹${rupeeSave} vs market price before checkout</div><div class="stock ${low?'low':'ok'}">${p.stock===0?'❌ Out of stock':low?'⚠️ Only '+p.stock+' '+(p.unit||'units')+' left':'✓ '+p.stock+' '+(p.unit||'units')+' available'}</div><div class="card-actions"><button class="btn btn-primary" ${p.stock===0?'disabled':''} onclick="addToCartById('${pid}')">Add to cart</button><button class="btn btn-light" onclick="openProductDetails('${pid}')">Details</button></div></div></div>`}
 function toggleMobileMenu(){const m=$('mobileMenu');if(m)m.classList.toggle('show')}
 function menuGo(id){toggleMobileMenu();showPage(id)}
