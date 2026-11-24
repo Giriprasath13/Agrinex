@@ -495,6 +495,10 @@
 
 
 <style id="agrinex-auth-pages">
+.auth-otp-panel{margin-top:14px;padding:15px;border:1px solid #d8e9dc;border-radius:14px;background:#f4faf5}
+.auth-otp-panel p{font-size:11px;color:#526158;margin-bottom:12px}
+.auth-otp-actions{display:grid;gap:8px}
+.auth-otp-actions .auth-back-link{justify-content:center}
 .auth-portal{position:fixed;inset:0;z-index:7000;display:none;background:#f5f8f5;overflow:auto;color:#18251d}.auth-portal.show{display:block}
 .auth-layout{min-height:100vh;display:grid;grid-template-columns:minmax(300px,.88fr) minmax(440px,1.12fr)}
 .auth-visual{position:relative;display:flex;flex-direction:column;justify-content:space-between;padding:42px clamp(28px,5vw,72px);overflow:hidden;background:radial-gradient(circle at 82% 25%,rgba(112,184,126,.38),transparent 28%),linear-gradient(145deg,#0d3c24,#145b34 62%,#1d7142);color:#fff}
@@ -794,15 +798,15 @@
      <div class="auth-role-heading"><span class="auth-role-icon">🛒</span><div><span class="auth-kicker" style="background:#e8f4eb;color:#146b38;border:0">CUSTOMER ACCOUNT</span><h2 style="margin-top:5px">Welcome, customer</h2><p class="auth-subtitle">Sign in to manage your shopping and orders.</p></div></div>
      <div class="auth-mode-tabs"><button type="button" id="customerLoginTab" class="active" onclick="setAuthMode('customer','login')">Sign in</button><button type="button" id="customerRegisterTab" onclick="setAuthMode('customer','register')">Create account</button></div>
      <form class="auth-form auth-mode" id="customerLoginForm" onsubmit="authLogin(event,'customer')"><div class="auth-field"><label for="customerLoginPhone">Mobile number</label><input id="customerLoginPhone" name="phone" type="tel" inputmode="numeric" autocomplete="tel" pattern="[0-9]{10}" maxlength="10" placeholder="10-digit mobile number" required></div><div class="auth-field"><label for="customerLoginPassword">Password</label><input id="customerLoginPassword" name="password" type="password" autocomplete="current-password" minlength="8" placeholder="Enter your password" required></div><button class="auth-submit" type="submit">Sign in as customer →</button><div class="auth-status" id="customerLoginStatus" aria-live="polite"></div></form>
-     <form class="auth-form auth-mode" id="customerRegisterForm" hidden onsubmit="authRegister(event,'customer')"><div class="auth-field"><label for="customerRegisterName">Full name</label><input id="customerRegisterName" name="name" autocomplete="name" maxlength="80" placeholder="Enter your full name" required></div><div class="auth-field"><label for="customerRegisterPhone">Mobile number</label><input id="customerRegisterPhone" name="phone" type="tel" inputmode="numeric" autocomplete="tel" pattern="[0-9]{10}" maxlength="10" placeholder="10-digit mobile number" required></div><div class="auth-field"><label for="customerRegisterPassword">Create password</label><input id="customerRegisterPassword" name="password" type="password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters" required></div><button class="auth-submit" type="submit">Create customer account →</button><div class="auth-status" id="customerRegisterStatus" aria-live="polite"></div></form>
+     <form class="auth-form auth-mode" id="customerRegisterForm" hidden onsubmit="authRegister(event,'customer')"><div class="auth-field"><label for="customerRegisterName">Full name</label><input id="customerRegisterName" name="name" autocomplete="name" maxlength="80" placeholder="Enter your full name" required></div><div class="auth-field"><label for="customerRegisterPhone">Mobile number</label><input id="customerRegisterPhone" name="phone" type="tel" inputmode="numeric" autocomplete="tel" pattern="[0-9]{10}" maxlength="10" placeholder="10-digit mobile number" required></div><div class="auth-field"><label for="customerRegisterPassword">Create password</label><input id="customerRegisterPassword" name="password" type="password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters" required></div><button class="auth-submit" type="submit">Create customer account →</button><div class="auth-status" id="customerRegisterStatus" aria-live="polite"></div><div class="auth-otp-panel" id="customerRegisterOtp" hidden><p>A 6-digit verification code was sent to your mobile number.</p><div class="auth-field"><label for="customerRegisterOtpCode">SMS verification code</label><input id="customerRegisterOtpCode" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="Enter 6-digit code"></div><div class="auth-otp-actions"><button class="auth-submit" type="button" onclick="authVerify(event,'customer')">Verify phone and create account</button><button class="auth-back-link" type="button" onclick="authResend('customer')">Resend code</button></div><div class="auth-status" id="customerOtpStatus" aria-live="polite"></div></div></form>
      <div class="auth-form-note">Your account is authenticated by the AgriNex server. Do not reuse a password from another service.</div><button class="auth-back-link" type="button" onclick="openAuthPortal('choose')">← Choose a different account type</button>
     </section>
     <section class="auth-view" id="farmerAuthPage" hidden>
      <div class="auth-role-heading"><span class="auth-role-icon">👨‍🌾</span><div><span class="auth-kicker" style="background:#e8f4eb;color:#146b38;border:0">FARMER ACCOUNT</span><h2 style="margin-top:5px">Welcome, farmer</h2><p class="auth-subtitle">Access your farm dashboard and manage your harvest.</p></div></div>
      <div class="auth-mode-tabs"><button type="button" id="farmerLoginTab" class="active" onclick="setAuthMode('farmer','login')">Sign in</button><button type="button" id="farmerRegisterTab" onclick="setAuthMode('farmer','register')">Create account</button></div>
      <form class="auth-form auth-mode" id="farmerLoginForm" onsubmit="authLogin(event,'farmer')"><div class="auth-field"><label for="farmerLoginPhone">Registered mobile number</label><input id="farmerLoginPhone" name="phone" type="tel" inputmode="numeric" autocomplete="tel" pattern="[0-9]{10}" maxlength="10" placeholder="10-digit mobile number" required></div><div class="auth-field"><label for="farmerLoginPassword">Password</label><input id="farmerLoginPassword" name="password" type="password" autocomplete="current-password" minlength="8" placeholder="Enter your password" required></div><button class="auth-submit" type="submit">Sign in to farmer dashboard →</button><div class="auth-status" id="farmerLoginStatus" aria-live="polite"></div></form>
-     <form class="auth-form auth-mode" id="farmerRegisterForm" hidden onsubmit="authRegister(event,'farmer')"><div class="auth-field"><label for="farmerRegisterName">Your full name</label><input id="farmerRegisterName" name="name" autocomplete="name" maxlength="80" placeholder="Enter your full name" required></div><div class="auth-field"><label for="farmerRegisterFarm">Farm name</label><input id="farmerRegisterFarm" name="farm_name" maxlength="100" placeholder="Example: Green Leaf Farm" required></div><div class="auth-field"><label for="farmerRegisterPhone">Mobile number</label><input id="farmerRegisterPhone" name="phone" type="tel" inputmode="numeric" autocomplete="tel" pattern="[0-9]{10}" maxlength="10" placeholder="10-digit mobile number" required></div><div class="auth-field"><label for="farmerRegisterPassword">Create password</label><input id="farmerRegisterPassword" name="password" type="password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters" required></div><button class="auth-submit" type="submit">Create farmer account →</button><div class="auth-status" id="farmerRegisterStatus" aria-live="polite"></div></form>
-     <div class="auth-form-note">Farmer access is tied to the role returned by the server. A customer account cannot open farmer tools.</div><button class="auth-back-link" type="button" onclick="openAuthPortal('choose')">← Choose a different account type</button>
+     <form class="auth-form auth-mode" id="farmerRegisterForm" hidden onsubmit="authRegister(event,'farmer')"><div class="auth-field"><label for="farmerRegisterName">Your full name</label><input id="farmerRegisterName" name="name" autocomplete="name" maxlength="80" placeholder="Enter your full name" required></div><div class="auth-field"><label for="farmerRegisterFarm">Farm name</label><input id="farmerRegisterFarm" name="farm_name" maxlength="100" placeholder="Example: Green Leaf Farm" required></div><div class="auth-field"><label for="farmerRegisterPhone">Mobile number</label><input id="farmerRegisterPhone" name="phone" type="tel" inputmode="numeric" autocomplete="tel" pattern="[0-9]{10}" maxlength="10" placeholder="10-digit mobile number" required></div><div class="auth-field"><label for="farmerRegisterPassword">Create password</label><input id="farmerRegisterPassword" name="password" type="password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters" required></div><button class="auth-submit" type="submit">Create farmer account →</button><div class="auth-status" id="farmerRegisterStatus" aria-live="polite"></div><div class="auth-otp-panel" id="farmerRegisterOtp" hidden><p>A 6-digit verification code was sent to your mobile number.</p><div class="auth-field"><label for="farmerRegisterOtpCode">SMS verification code</label><input id="farmerRegisterOtpCode" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="Enter 6-digit code"></div><div class="auth-otp-actions"><button class="auth-submit" type="button" onclick="authVerify(event,'farmer')">Verify phone and create account</button><button class="auth-back-link" type="button" onclick="authResend('farmer')">Resend code</button></div><div class="auth-status" id="farmerOtpStatus" aria-live="polite"></div></div></form>
+     <div class="auth-form-note">Farmer accounts require phone verification and admin approval before selling tools are enabled.</div><button class="auth-back-link" type="button" onclick="openAuthPortal('choose')">← Choose a different account type</button>
     </section>
     <section class="auth-view" id="authAccountPage" hidden><span class="auth-kicker" style="background:#e8f4eb;color:#146b38;border:0">YOUR AGRINEX ACCOUNT</span><h2 style="margin-top:15px">You're signed in.</h2><div class="auth-account-card"><strong id="authAccountName">Your account</strong><p id="authAccountRole">Account role</p><div class="auth-account-actions"><button type="button" onclick="closeAuthPortal();showPage('home')">Continue to marketplace</button><button type="button" id="authAccountDashboard" onclick="closeAuthPortal();showPage('farmer')" hidden>Open farmer dashboard</button><button type="button" class="danger" onclick="authSignOutAndSwitch()">Sign out / switch account</button></div></div></section>
    </div>
@@ -1127,10 +1131,14 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
 <script>
 (function(){
   const API_KEY='ff_api_base';
-  const DEFAULT_API='http://localhost:8000';
   let backendReady=false;
   let syncing=false;
-  const apiBase=()=>String(storage.get(API_KEY,DEFAULT_API)||DEFAULT_API).replace(/\/$/,'');
+  const apiBase=()=>{
+    const saved=String(storage.get(API_KEY,'')||'').trim();
+    const pointsToLocalhost=/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(saved);
+    const onHostedSite=!['localhost','127.0.0.1'].includes(location.hostname);
+    return (saved&&!(pointsToLocalhost&&onHostedSite)?saved:location.origin).replace(/\/$/,'');
+  };
   window.getApiBase=apiBase;
   const token=()=>storage.get('ff_access_token','');
   async function api(path,options={}){
@@ -1169,7 +1177,7 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
     try{
       await api('/health'); backendReady=true; backendStatus();
       if(token()){
-        try{const me=await api('/api/auth/me');currentUser={name:me.name,contact:me.phone,role:me.role,signedInAt:new Date().toISOString()};storage.set('ff_user',currentUser);updateProfileUI();}catch(_){storage.remove('ff_access_token');currentUser=null;storage.remove('ff_user');}
+        try{const me=await api('/api/auth/me');currentUser={name:me.name,contact:me.phone,role:me.role,farmerStatus:me.farmer_status||'not_applicable',signedInAt:new Date().toISOString()};storage.set('ff_user',currentUser);updateProfileUI();}catch(_){storage.remove('ff_access_token');currentUser=null;storage.remove('ff_user');}
       }
       await syncProducts();
       if(token()){await Promise.allSettled([syncCart(),syncAddresses(),syncOrders(),syncNotifications()]);}
@@ -1243,17 +1251,55 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
     try{const ws=new WebSocket(u.toString());ws.onmessage=async(ev)=>{try{const msg=JSON.parse(ev.data);if(['inventory.updated','order.status','payment.verified','order.created','farmer.order.created'].includes(msg.type)){await Promise.allSettled([syncProducts(),syncCart(),syncOrders(),syncNotifications()]);toast('Live update received');}}catch(_){}};ws.onclose=()=>setTimeout(connectSocket,5000);}catch(_){}}
 
   let authReturnPage='home';
-  function authSetStatus(role,mode,message,isOk=false){const el=document.getElementById(role+(mode==='register'?'Register':'Login')+'Status');if(el){el.textContent=message||'';el.classList.toggle('ok',!!isOk)}}
-  function authSetView(view){document.querySelectorAll('#authPortal .auth-view').forEach(x=>x.hidden=true);const el=document.getElementById(view);if(el)el.hidden=false;}
-  window.closeAuthPortal=function(){const portal=document.getElementById('authPortal');if(portal){portal.classList.remove('show');portal.setAttribute('aria-hidden','true')}document.body.style.overflow='';};
+  const authOtpState={customer:null,farmer:null};
+  function authSetStatus(role,mode,message,isOk=false){
+    const el=document.getElementById(role+(mode==='register'?'Register':'Login')+'Status');
+    if(el){el.textContent=message||'';el.classList.toggle('ok',!!isOk)}
+  }
+  function authSetOtpStatus(role,message,isOk=false){
+    const el=document.getElementById(role+'OtpStatus');
+    if(el){el.textContent=message||'';el.classList.toggle('ok',!!isOk)}
+  }
+  function authSetView(view){
+    document.querySelectorAll('#authPortal .auth-view').forEach(x=>x.hidden=true);
+    const el=document.getElementById(view);if(el)el.hidden=false;
+  }
+  function authStoreSession(d){
+    storage.set('ff_access_token',d.access_token);
+    currentUser={
+      name:d.user.name,
+      contact:d.user.phone,
+      role:d.user.role,
+      farmerStatus:d.user.farmer_status||'not_applicable',
+      signedInAt:new Date().toISOString()
+    };
+    storage.set('ff_user',currentUser);
+    updateProfileUI();renderAccountActions();backendReady=true;backendStatus();
+  }
+  async function authAfterSession(role,source){
+    await Promise.allSettled([syncProducts(),syncCart(),syncAddresses(),syncOrders(),syncNotifications()]);
+    if(role==='farmer'&&currentUser.farmerStatus!=='approved'){
+      window.closeAuthPortal();
+      toast('Phone verified. Farmer account is pending admin approval before selling tools are enabled.');
+      return;
+    }
+    window.closeAuthPortal();
+    showPage(role==='farmer'?'farmer':(authReturnPage==='farmer'||authReturnPage==='inventory'?'home':authReturnPage));
+    toast(source==='verify'?'Phone verified. Account created successfully.':'Signed in successfully');
+  }
+  window.closeAuthPortal=function(){
+    const portal=document.getElementById('authPortal');
+    if(portal){portal.classList.remove('show');portal.setAttribute('aria-hidden','true')}
+    document.body.style.overflow='';
+  };
   window.openAuthPortal=function(role='choose'){
     const portal=document.getElementById('authPortal');if(!portal)return;
     authReturnPage=document.querySelector('.page.active')?.id||'home';
     portal.classList.add('show');portal.setAttribute('aria-hidden','false');document.body.style.overflow='hidden';
     if(currentUser&&token()){
       document.getElementById('authAccountName').textContent=currentUser.name||'AgriNex user';
-      document.getElementById('authAccountRole').textContent=(currentUser.role==='farmer'?'Farmer account':'Customer account')+' · '+(currentUser.contact||'');
-      const dash=document.getElementById('authAccountDashboard');if(dash)dash.hidden=currentUser.role!=='farmer';
+      document.getElementById('authAccountRole').textContent=(currentUser.role==='farmer'?'Farmer account':'Customer account')+' · '+(currentUser.contact||'')+(currentUser.role==='farmer'&&currentUser.farmerStatus!=='approved'?' · Pending approval':'');
+      const dash=document.getElementById('authAccountDashboard');if(dash)dash.hidden=currentUser.role!=='farmer'||currentUser.farmerStatus!=='approved';
       authSetView('authAccountPage');
       if(role==='farmer'&&currentUser.role!=='farmer')toast('This signed-in account is not registered as a farmer. Sign out to switch accounts.');
       return;
@@ -1264,11 +1310,16 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
   window.setAuthMode=function(role,mode){
     if(!['customer','farmer'].includes(role)||!['login','register'].includes(mode))return;
     const prefix=role==='customer'?'customer':'farmer';
+    const registerForm=document.getElementById(prefix+'RegisterForm');
+    const pending=Boolean(authOtpState[role]);
     document.getElementById(prefix+'LoginForm').hidden=mode!=='login';
-    document.getElementById(prefix+'RegisterForm').hidden=mode!=='register';
+    registerForm.hidden=mode!=='register';
     document.getElementById(prefix+'LoginTab').classList.toggle('active',mode==='login');
     document.getElementById(prefix+'RegisterTab').classList.toggle('active',mode==='register');
-    authSetStatus(role,'login','');authSetStatus(role,'register','');
+    registerForm.querySelectorAll('.auth-field').forEach(el=>{el.hidden=pending;});
+    const submit=registerForm.querySelector(':scope > .auth-submit');if(submit)submit.hidden=pending;
+    const otpPanel=document.getElementById(prefix+'RegisterOtp');if(otpPanel)otpPanel.hidden=!pending;
+    authSetStatus(role,'login','');authSetStatus(role,'register','');authSetOtpStatus(role,'');
   };
   window.authLogin=async function(event,role){
     event?.preventDefault();
@@ -1278,53 +1329,103 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
     authSetStatus(role,'login','');
     if(!/^[0-9]{10}$/.test(phone)){authSetStatus(role,'login','Enter a valid 10-digit mobile number.');return false;}
     if(password.length<8){authSetStatus(role,'login','Password must contain at least 8 characters.');return false;}
-    const button=document.querySelector('#'+prefix+'LoginForm .auth-submit');if(button){button.disabled=true;button.textContent='Signing in…';}
+    const button=document.querySelector('#'+prefix+'LoginForm .auth-submit');
+    if(button){button.disabled=true;button.textContent='Signing in…';}
     try{
       const d=await api('/api/auth/login',{method:'POST',body:JSON.stringify({phone,password})});
       if(!d?.access_token||!d?.user?.role)throw new Error('The server returned an incomplete sign-in response.');
-      if(d.user.role!==role){authSetStatus(role,'login','This number belongs to a '+d.user.role+' account. Choose the matching sign-in page.');return false;}
-      storage.set('ff_access_token',d.access_token);currentUser={name:d.user.name,contact:d.user.phone,role:d.user.role,signedInAt:new Date().toISOString()};storage.set('ff_user',currentUser);
-      updateProfileUI();renderAccountActions();backendReady=true;backendStatus();window.closeAuthPortal();
-      await Promise.allSettled([syncProducts(),syncCart(),syncAddresses(),syncOrders(),syncNotifications()]);
-      showPage(role==='farmer'?'farmer':(authReturnPage==='farmer'||authReturnPage==='inventory'?'home':authReturnPage));toast('Signed in successfully');
+      if(d.user.role!==role){
+        authSetStatus(role,'login','This number belongs to a '+d.user.role+' account. Choose the matching sign-in page.');
+        return false;
+      }
+      authStoreSession(d);
+      await authAfterSession(role,'login');
     }catch(e){
-      const message=/Failed to fetch|NetworkError|fetch/i.test(e.message||'')?'AgriNex server is not connected. The login page is ready, but the authentication API must be deployed and configured.':(e.message||'Unable to sign in. Check your details and try again.');
+      const message=/Failed to fetch|NetworkError|fetch/i.test(e.message||'')?'AgriNex authentication API is not reachable. Check the deployment and API configuration.':(e.message||'Unable to sign in. Check your details and try again.');
       authSetStatus(role,'login',message);
-    }finally{if(button){button.disabled=false;button.textContent=role==='farmer'?'Sign in to farmer dashboard →':'Sign in as customer →';}}
+    }finally{
+      if(button){button.disabled=false;button.textContent=role==='farmer'?'Sign in to farmer dashboard →':'Sign in as customer →';}
+    }
     return false;
   };
   window.authRegister=async function(event,role){
     event?.preventDefault();
     const prefix=role==='customer'?'customer':'farmer';
+    const form=document.getElementById(prefix+'RegisterForm');
     const name=document.getElementById(prefix+'RegisterName')?.value.trim()||'';
     const phone=document.getElementById(prefix+'RegisterPhone')?.value.trim()||'';
     const password=document.getElementById(prefix+'RegisterPassword')?.value||'';
     const farmName=role==='farmer'?(document.getElementById('farmerRegisterFarm')?.value.trim()||''):'';
-    authSetStatus(role,'register','');
+    authSetStatus(role,'register','');authSetOtpStatus(role,'');
     if(name.length<2){authSetStatus(role,'register','Enter your full name.');return false;}
     if(!/^[0-9]{10}$/.test(phone)){authSetStatus(role,'register','Enter a valid 10-digit mobile number.');return false;}
     if(password.length<8){authSetStatus(role,'register','Choose a password with at least 8 characters.');return false;}
     if(role==='farmer'&&!farmName){authSetStatus(role,'register','Enter your farm name.');return false;}
-    const button=document.querySelector('#'+prefix+'RegisterForm .auth-submit');if(button){button.disabled=true;button.textContent='Creating account…';}
+    const button=form.querySelector(':scope > .auth-submit');
+    if(button){button.disabled=true;button.textContent='Sending verification code…';}
     try{
       const d=await api('/api/auth/register',{method:'POST',body:JSON.stringify({phone,name,password,role,farm_name:farmName||null})});
-      if(!d?.access_token||!d?.user?.role)throw new Error('The server returned an incomplete account response.');
-      if(d.user.role!==role)throw new Error('The server returned a different account role.');
-      storage.set('ff_access_token',d.access_token);currentUser={name:d.user.name,contact:d.user.phone,role:d.user.role,signedInAt:new Date().toISOString()};storage.set('ff_user',currentUser);
-      updateProfileUI();renderAccountActions();backendReady=true;backendStatus();window.closeAuthPortal();
-      await Promise.allSettled([syncProducts(),syncCart(),syncAddresses(),syncOrders(),syncNotifications()]);
-      showPage(role==='farmer'?'farmer':'home');toast('Your AgriNex account has been created');
+      if(!d?.verification_required)throw new Error('The server did not confirm that SMS verification is required.');
+      authOtpState[role]=phone;
+      form.querySelectorAll('.auth-field').forEach(el=>{el.hidden=true;});
+      if(button)button.hidden=true;
+      document.getElementById(prefix+'RegisterOtp').hidden=false;
+      authSetStatus(role,'register','');
+      authSetOtpStatus(role,d.message||'Verification code requested. Check your SMS messages.',true);
+      document.getElementById(prefix+'RegisterOtpCode').focus();
     }catch(e){
-      const message=/Failed to fetch|NetworkError|fetch/i.test(e.message||'')?'AgriNex server is not connected. The authentication API must be deployed and configured before accounts can be created.':(e.message||'Unable to create the account. Try again.');
+      const message=/Failed to fetch|NetworkError|fetch/i.test(e.message||'')?'AgriNex authentication API is not reachable. The server must be deployed and configured first.':(e.message||'Unable to start registration. Try again.');
       authSetStatus(role,'register',message);
-    }finally{if(button){button.disabled=false;button.textContent=role==='farmer'?'Create farmer account →':'Create customer account →';}}
+    }finally{
+      if(button){button.disabled=false;button.textContent=role==='farmer'?'Create farmer account →':'Create customer account →';}
+    }
     return false;
+  };
+  window.authVerify=async function(event,role){
+    event?.preventDefault();
+    const prefix=role==='customer'?'customer':'farmer';
+    const phone=authOtpState[role];
+    const code=document.getElementById(prefix+'RegisterOtpCode')?.value.trim()||'';
+    authSetOtpStatus(role,'');
+    if(!phone){authSetOtpStatus(role,'Start registration first.');return false;}
+    if(!/^[0-9]{6}$/.test(code)){authSetOtpStatus(role,'Enter the 6-digit code sent by SMS.');return false;}
+    const button=document.querySelector('#'+prefix+'RegisterOtp .auth-submit');
+    if(button){button.disabled=true;button.textContent='Verifying…';}
+    try{
+      const d=await api('/api/auth/verify',{method:'POST',body:JSON.stringify({phone,token:code})});
+      if(!d?.access_token||!d?.user?.role)throw new Error('The server returned an incomplete verification response.');
+      if(d.user.role!==role)throw new Error('The verified account role does not match this registration.');
+      authOtpState[role]=null;
+      authStoreSession(d);
+      document.getElementById(prefix+'RegisterForm').reset();
+      document.getElementById(prefix+'RegisterForm').querySelectorAll('.auth-field').forEach(el=>{el.hidden=false;});
+      const submit=document.querySelector('#'+prefix+'RegisterForm > .auth-submit');if(submit)submit.hidden=false;
+      document.getElementById(prefix+'RegisterOtp').hidden=true;
+      await authAfterSession(role,'verify');
+    }catch(e){
+      authSetOtpStatus(role,e.message||'Verification failed. Check the code and try again.');
+    }finally{
+      if(button){button.disabled=false;button.textContent='Verify phone and create account';}
+    }
+    return false;
+  };
+  window.authResend=async function(role){
+    const phone=authOtpState[role];if(!phone){authSetOtpStatus(role,'Start registration first.');return;}
+    const prefix=role==='customer'?'customer':'farmer';
+    const button=document.querySelector('#'+prefix+'RegisterOtp .auth-back-link');
+    if(button){button.disabled=true;button.textContent='Sending…';}
+    try{
+      const d=await api('/api/auth/resend',{method:'POST',body:JSON.stringify({phone})});
+      authSetOtpStatus(role,d.message||'A new code was requested.',true);
+    }catch(e){authSetOtpStatus(role,e.message||'Could not resend the code.');}
+    finally{if(button){button.disabled=false;button.textContent='Resend code';}}
   };
   window.authSignOutAndSwitch=function(){window.logoutDemo();window.openAuthPortal('choose');};
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('authPortal')?.classList.contains('show'))window.closeAuthPortal();});
   const originalShowPage=window.showPage; window.showPage=function(id){
-    if((id==='farmer'||id==='inventory')&&(!currentUser||!token()||currentUser.role!=='farmer')){
-      if(currentUser&&token()&&currentUser.role!=='farmer')toast('Farmer tools are restricted to farmer accounts.');
+    if((id==='farmer'||id==='inventory')&&(!currentUser||!token()||currentUser.role!=='farmer'||currentUser.farmerStatus!=='approved')){
+      if(currentUser&&token()&&currentUser.role==='farmer'&&currentUser.farmerStatus!=='approved')toast('Farmer verification is pending admin approval.');
+      else if(currentUser&&token()&&currentUser.role!=='farmer')toast('Farmer tools are restricted to farmer accounts.');
       else{window.openAuthPortal('farmer');toast('Sign in with a farmer account to continue.');}
       return;
     }
