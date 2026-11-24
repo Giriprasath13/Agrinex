@@ -194,6 +194,132 @@ def session_response(access_token: str, profile: dict) -> dict:
 
 
 
+
+DATA_GOV_MANDI_RESOURCE_ID = os.getenv(
+    "DATA_GOV_IN_RESOURCE_ID",
+    "9ef84268-d588-465a-a308-a864a43d0070",
+).strip()
+DATA_GOV_MANDI_SOURCE_URL = (
+    "https://data.gov.in/resource/current-daily-price-various-commodities-various-markets-mandi"
+)
+
+
+def _parse_market_date(value: object) -> str | None:
+    raw = str(value or "").strip()
+    if not raw:
+        return None
+    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d"):
+        try:
+            return datetime.strptime(raw, fmt).date().isoformat()
+        except ValueError:
+            continue
+    return None
+
+
+def _parse_market_amount(value: object) -> float | None:
+    try:
+        amount = Decimal(str(value).replace(",", "").strip())
+    except Exception:
+        return None
+    if not amount.is_finite() or amount < 0 or amount > Decimal("100000000"):
+        return None
+    return float(amount)
+
+
+async def _fetch_data_gov_mandi_records(
+    state: str,
+    district: str | None = None,
+    commodity: str | None = None,
+    max_records: int = 100,
+) -> list[dict]:
+    api_key = os.getenv("DATA_GOV_IN_API_KEY", "").strip()
+    if not api_key:
+        raise HTTPException(
+            status_code=503,
+            detail="The data.gov.in API key is not configured. An administrator must add DATA_GOV_IN_API_KEY to the server environment.",
+        )
+    if not state.strip():
+        raise HTTPException(status_code=422, detail="Choose a state to limit the mandi-price query.")
+    max_records = max(1, min(int(max_records), 500))
+    page_size = min(100, max_records)
+    collected: list[dict] = []
+    try:
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            for offset in range(0, max_records, page_size):
+                limit = min(page_size, max_records - offset)
+                params = {
+                    "api-key": api_key,
+                    "format": "json",
+                    "limit": str(limit),
+                    "offset": str(offset),
+                    "filters[state]": state.strip(),
+                }
+                if district and district.strip():
+                    params["filters[district]"] = district.strip()
+                if commodity and commodity.strip():
+                    params["filters[commodity]"] = commodity.strip()
+                response = await client.get(
+                    f"https://api.data.gov.in/resource/{quote(DATA_GOV_MANDI_RESOURCE_ID, safe='')}",
+                    params=params,
+                    headers={"Accept": "application/json"},
+                )
+                if response.status_code in (401, 403):
+                    raise HTTPException(
+                        status_code=502,
+                        detail="data.gov.in rejected the server API key. Check its validity and quota.",
+                    )
+                if not response.is_success:
+                    raise HTTPException(
+                        status_code=502,
+                        detail=f"data.gov.in returned HTTP {response.status_code}.",
+                    )
+                payload = response.json()
+                records = payload.get("records") or []
+                if not records:
+                    break
+                for item in records:
+                    arrival_date = _parse_market_date(item.get("arrival_date"))
+                    min_price = _parse_market_amount(item.get("min_price"))
+                    max_price = _parse_market_amount(item.get("max_price"))
+                    modal_price = _parse_market_amount(item.get("modal_price"))
+                    if not arrival_date or None in (min_price, max_price, modal_price):
+                        continue
+                    if not (min_price <= modal_price <= max_price):
+                        continue
+                    record_state = str(item.get("state") or state).strip()
+                    record_district = str(item.get("district") or "").strip()
+                    market = str(item.get("market") or "").strip()
+                    commodity_name = str(item.get("commodity") or "").strip()
+                    if not all((record_state, record_district, market, commodity_name)):
+                        continue
+                    collected.append({
+                        "state": record_state,
+                        "district": record_district,
+                        "market": market,
+                        "commodity": commodity_name,
+                        "variety": item.get("variety"),
+                        "grade": item.get("grade"),
+                        "arrival_date": arrival_date,
+                        "min_price": min_price,
+                        "max_price": max_price,
+                        "modal_price": modal_price,
+                        "price_unit": "INR_PER_QUINTAL",
+                        "source": "AGMARKNET_DATA_GOV_IN",
+                        "source_url": DATA_GOV_MANDI_SOURCE_URL,
+                    })
+                if len(records) < limit:
+                    break
+    except HTTPException:
+        raise
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="data.gov.in price feed timed out.")
+    except httpx.RequestError:
+        raise HTTPException(status_code=502, detail="Could not reach the data.gov.in price feed.")
+    except ValueError:
+        raise HTTPException(status_code=502, detail="data.gov.in returned invalid JSON.")
+    return collected
+
+
 def _service_role_key() -> str:
     key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
     if not key:
@@ -1883,6 +2009,48 @@ async def get_farmer_demand_signals(authorization: str | None = Header(default=N
     }
 
 
+
+@app.post("/api/admin/market-prices/sync")
+async def sync_market_prices_from_data_gov(
+    state: str,
+    district: str | None = None,
+    commodity: str | None = None,
+    limit: int = 100,
+    authorization: str | None = Header(default=None),
+):
+    token, _ = await _profile_from_header(authorization)
+    rows = await _fetch_data_gov_mandi_records(
+        state=state,
+        district=district,
+        commodity=commodity,
+        max_records=limit,
+    )
+    if not rows:
+        return {
+            "fetched": 0,
+            "imported": 0,
+            "state": state,
+            "message": "The source returned no valid rows for these filters. No market price was generated.",
+            "source": DATA_GOV_MANDI_SOURCE_URL,
+        }
+    result = await supabase_request(
+        "POST", "/rest/v1/rpc/admin_import_agrinex_market_prices",
+        access_token=token,
+        payload={"p_rows": rows},
+    )
+    imported = int((result or {}).get("upserted", 0)) if isinstance(result, dict) else 0
+    return {
+        "fetched": len(rows),
+        "imported": imported,
+        "state": state,
+        "source": DATA_GOV_MANDI_SOURCE_URL,
+        "resource_id": DATA_GOV_MANDI_RESOURCE_ID,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "price_unit": "INR_PER_QUINTAL",
+        "message": "Daily wholesale observations were imported. They are not guaranteed farm-gate prices.",
+    }
+
+
 @app.post("/api/admin/market-prices/import")
 async def import_market_prices(rows: list[dict], authorization: str | None = Header(default=None)):
     token, _ = await _profile_from_header(authorization)
@@ -1934,7 +2102,13 @@ async def marketplace_health():
                 "booking_requires_farmer_acceptance": True,
                 "live_booking_disabled_for_student_pilot": os.getenv("AGRI_LIVE_LOGISTICS_APPROVED", "").strip().lower() != "true",
             },
-            "market_prices": {"import_enabled": True, "verified_observations_only": True},
+            "market_prices": {
+                "import_enabled": True,
+                "daily_api_configured": bool(os.getenv("DATA_GOV_IN_API_KEY", "").strip()),
+                "resource_id": DATA_GOV_MANDI_RESOURCE_ID,
+                "verified_observations_only": True,
+                "frequency": "daily dataset; not real-time",
+            },
             "automatic_farmer_transfers": {"enabled": False, "reason": "Adult-operated marketplace and seller settlement onboarding is required."}
         },
         "online_payments_enabled": razorpay_ready,
