@@ -27,6 +27,21 @@ class AuthApiContractTests(unittest.TestCase):
         self.assertEqual(response.json()["status"], "ok")
         self.assertFalse(response.json()["authentication_configured"])
 
+
+    def test_homepage_serves_both_hidden_sms_otp_panels(self):
+        response = self.client.get("/")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.text
+        for element_id in (
+            'id="customerRegisterOtp"',
+            'id="farmerRegisterOtp"',
+            'id="customerRegisterOtpCode"',
+            'id="farmerRegisterOtpCode"',
+        ):
+            self.assertIn(element_id, html)
+        self.assertIn('pattern="[0-9]{6}"', html)
+
     def test_me_requires_bearer_token(self):
         response = self.client.get("/api/auth/me")
 
