@@ -1,145 +1,90 @@
 # AgriNex
 
-AgriNex is a farmer-first, farm-to-family marketplace. The current feature branch upgrades the original single-file frontend prototype with a FastAPI API layer and a dedicated Supabase database for shared farmer, product, order and buyer data.
+AgriNex is a farmer-first farm-to-family marketplace. The current feature branch contains a FastAPI API, a dedicated Supabase database, the customer/farmer marketplace, bulk buyer quotations, and provider adapters.
 
-> **Deployment scope:** changes are being developed on `feature/phone-sms-auth`. They are not merged into `main`. Treat the preview as a pilot build, not a production marketplace until the external setup and real-user acceptance checks below are complete.
+> **Preview / pilot scope:** All development remains on `feature/phone-sms-auth`. The branch is not merged into `main`. Do not use it for live commerce until a responsible adult-operated legal entity, a reviewed operating process, provider onboarding, and end-to-end acceptance tests are in place.
 
-## Product workflows
+## What is implemented
 
 ### Customers and business buyers
-
-- Customer registration and sign-in use phone number + password.
-- Registration requires a six-digit SMS phone confirmation.
-- Discover active listings from approved farmers.
-- Save delivery addresses and maintain a server-backed cart after sign-in.
-- Place marketplace orders using **Cash on Delivery only**.
-- The database checks the current listing, farmer approval and stock inside one transaction before confirming an order.
-- Business buyers can post bulk requirements. Approved farmers can submit quotations against their own active listings. Accepting an offer is an agreement step; it does not automatically create an order.
+- Separate customer and farmer phone/password registration screens.
+- Six-digit SMS confirmation is part of registration; the live SMS provider still needs configuration in Supabase Auth.
+- Active listings from approved farmers, saved delivery addresses, and a server-backed cart.
+- COD checkout with order and stock validation inside a database transaction.
+- Razorpay **test-mode adapter**: creates a gateway test order, verifies the checkout signature server-side, checks the captured payment and amount with the provider, and reconciles signed webhook events idempotently.
+- Bulk procurement requests and farmer quotations. Accepting a quotation does not itself create a confirmed order.
 
 ### Farmers
+- Pending, approved and rejected verification states with a private admin approval queue.
+- Server-backed product listings, inventory, images, order processing, notifications and delivered-sales summaries.
+- Draft listings while pending; publishing, bulk offers and order processing require approval.
+- Browser voice input (where supported) and photo-assisted product creation.
+- Text-only offline draft sync. Images are not cached offline and must be selected again after reconnecting.
+- Tamil/English shared UI translation and saved language preference. The translation dictionary is broad for core flows but still requires a human review; it is not yet a professionally reviewed complete localization.
 
-- Farmer registration begins with a pending verification status.
-- Farm details can be submitted for administrator review.
-- Pending farmers can view their review status and save draft listings, but cannot publish or process orders.
-- Approved farmers can create listings, upload product photos, edit stock, manage orders and submit bulk offers.
-- The dashboard uses API-backed product, order and delivered-sales summaries rather than the old fixed demo revenue and order values.
-- Product images accept JPEG, PNG or WEBP files up to 5 MB.
-- Browser-supported speech recognition can fill the product name in English (India) or Tamil (India). This is speech-to-text assistance, not an AI crop-recognition system.
-- A text-only offline draft queue is available in the browser. Photo files are not saved to that queue; the farmer must select the photo again after reconnecting.
+### Market and fulfilment data
+- Daily AGMARKNET/data.gov.in price-feed adapter. It imports dated wholesale observations, not real-time prices. The server needs a data.gov.in API key.
+- Farmer demand summaries use AgriNex's own order records only. They are not a measure of total local market demand.
+- Shiprocket adapter for serviceability, booking, AWB and pickup requests. Live booking is deliberately blocked in this student pilot.
+- WhatsApp Cloud API template adapter with explicit per-user opt-in. Provider acceptance is not proof of message delivery; delivery webhooks are not yet integrated.
+- Settlement-readiness calculations distinguish delivered sales from actually collected COD or captured prepaid payments. Automatic transfers are disabled.
 
-### Farmer discovery and trust
+## Integration status
 
-- Public listings are visible only while the product is active and its farmer profile is approved.
-- Farmer identity and farm-name display values are tied to the authenticated profile in the database.
-- Approval changes update the listing visibility state.
-- Product detail pages include product guidance, freshness/storage suggestions, related listings and customer reviews.
+| Integration | Code status | External activation |
+| --- | --- | --- |
+| SMS OTP | Supabase phone registration flow | SMS provider, sender/region setup, real OTP test |
+| First admin | Private allowlist and protected review RPC | A trusted administrator must register and be added to the allowlist |
+| Online payment | Razorpay test adapter and server verification | Test merchant credentials required; live payments disabled |
+| Automatic payouts | Settlement eligibility ledger only | No transfers; live money movement is not enabled |
+| WhatsApp | Consent + approved-template adapter | Meta Business sender, approved templates and access token required |
+| Logistics | Shiprocket adapter and shipment schema | API account and pickup setup; live booking disabled |
+| Tamil | Shared UI translation dictionary | Human translation/review of every page and device-sized layout |
+| Price guidance | Dated daily mandi import and display | data.gov.in API key and imported observations |
+| AI demand | AgriNex order-history signals | No external AI model / city-wide demand source connected |
+| Farmer pilot | Field-pilot plan and metrics | Real farmers, buyers, consent and an adult/college supervisor required |
 
-## API endpoints
+## Architecture
 
-Authentication:
-- `GET /health`
-- `POST /api/auth/register`
-- `POST /api/auth/resend`
-- `POST /api/auth/verify`
-- `POST /api/auth/login`
-- `GET /api/auth/me`
+- **Frontend:** existing single-page HTML/CSS/JavaScript application.
+- **API:** FastAPI in `index.py`.
+- **Database/Auth/Storage:** dedicated Supabase project; database changes are versioned in `supabase/migrations/`.
+- **Hosting:** Vercel Preview deployment.
+- **Security:** user access tokens are forwarded to Supabase; database Row Level Security enforces ownership. Server-only provider calls use environment variables. A service-role key must never be sent to a browser or committed to Git.
 
-Profiles and farmer verification:
-- `GET/PATCH /api/profile`
-- `POST /api/farmer/verification`
-- `GET /api/admin/farmer-applications`
-- `POST /api/admin/farmer-applications/{farmer_id}/review`
+## Required environment variables
 
-Products, storage and inventory:
-- `GET /api/products`
-- `GET /api/farmer/products`
-- `POST /api/products`
-- `PATCH/DELETE /api/products/{product_id}`
-- `POST /api/products/{product_id}/image`
+Always server-side, never in frontend JavaScript:
 
-Cart, addresses and orders:
-- `GET/POST/DELETE /api/cart`
-- `PATCH /api/cart/{product_id}`
-- `GET/POST /api/addresses`
-- `GET/POST /api/orders`
-- `POST /api/orders/{order_id}/status`
-- `GET /api/farmer/orders`
-- `GET /api/farmer/summary`
-- `GET /api/farmer/earnings`
-- `GET/PATCH /api/notifications`
+| Variable | Purpose |
+| --- | --- |
+| `SUPABASE_URL` | Dedicated AgriNex project URL |
+| `SUPABASE_PUBLISHABLE_KEY` | Supabase public/publishable API key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server-only webhook/consent-recipient operations; never expose it |
+| `PHONE_COUNTRY_CODE` | `+91` for Indian numbers |
 
-Bulk procurement:
-- `GET/POST /api/bulk-requests`
-- `GET /api/bulk-requests/{request_id}/offers`
-- `POST /api/bulk-requests/{request_id}/offers`
-- `PATCH /api/bulk-offers/{offer_id}`
-
-Health:
-- `GET /api/marketplace/health`
-
-The FastAPI service forwards the signed-in user's Supabase access token. It uses the Supabase publishable key on the server and does **not** need a service-role key. Row Level Security and database functions enforce ownership, farmer approval and order transitions.
+Optional provider variables are documented in [docs/PROVIDER_SETUP.md](docs/PROVIDER_SETUP.md). The currently deployed project has the Supabase URL/publishable key configured; optional provider credentials are not assumed to exist.
 
 ## Supabase setup
 
-Use a dedicated Supabase project for AgriNex. Do not connect this app to a database belonging to another application.
+1. Use only the dedicated AgriNex Supabase project.
+2. Apply the repository migrations in order for a fresh environment. For an existing environment, inspect `supabase_migrations.schema_migrations` before applying anything.
+3. Enable Supabase Auth Phone and phone confirmation.
+4. Configure an SMS provider in Supabase Auth and test an OTP using an account/number you control.
+5. Add a trusted administrator profile UUID to `private.agrinex_admins` using the procedure in [docs/ADMIN_SETUP.md](docs/ADMIN_SETUP.md).
 
-Repository migrations are in `supabase/migrations/`. They describe the auth profile, marketplace, farmer-verification, order, bulk-offer and earnings schemas. The hosted AgriNex project already has these migrations applied; do not rerun SQL manually against an existing environment without first checking its migration history.
+The first administrator cannot be invented by the application: the profile must exist after a real, verified registration.
 
-In Supabase Auth settings:
-1. Enable the Phone provider and phone confirmation.
-2. Configure an SMS provider and verify its sender/region settings.
-3. Check destination country permissions, OTP expiry, rate limits and provider balance.
-4. Test registration and SMS delivery using a consenting test account.
+## Important operating limits
 
-SMS provider costs are separate from the Supabase database plan.
-
-### Administrator allowlist
-
-Farmer approvals require a user ID in `private.agrinex_admins`. There is no browser-side admin switch. Create a dedicated customer account for the project administrator, verify that account, then obtain its profile UUID in the SQL editor:
-
-```sql
-select id, phone, full_name, role
-from public.agrinex_profiles
-where phone = '+91XXXXXXXXXX';
-```
-
-Add the verified administrator account UUID to the private allowlist:
-
-```sql
-insert into private.agrinex_admins(user_id)
-values ('REPLACE-WITH-ADMIN-PROFILE-UUID')
-on conflict (user_id) do nothing;
-```
-
-Do not use a farmer's own account as the only administrator: the system prevents an administrator from reviewing their own farmer application. Keep administrator membership limited to trusted project maintainers.
-
-## Environment variables
-
-Set these in Vercel Project Settings → Environment Variables for Preview and Production:
-
-| Name | Value |
-| --- | --- |
-| `SUPABASE_URL` | URL of the dedicated AgriNex Supabase project |
-| `SUPABASE_PUBLISHABLE_KEY` | Its publishable API key |
-| `PHONE_COUNTRY_CODE` | `+91` for ten-digit Indian mobile numbers |
-
-The API accepts `SUPABASE_ANON_KEY` as a backward-compatible alternative. Never add a service-role key to frontend code, public environment variables or GitHub.
-
-## Payment, payout and delivery limits
-
-- Checkout currently supports **Cash on Delivery only**.
-- The COD collection state remains pending until it is confirmed through a separate process. The app does not collect money.
-- Farmer earnings are computed only from delivered order items. The displayed payout is an estimate, not a bank or UPI settlement.
-- Platform fee and delivery fee are currently zero in the order function. Publish a real fee schedule before charging farmers or buyers.
-- Delivery statuses can be advanced by the farmer. There is no live carrier allocation, route tracking or automated pickup service yet.
-- Bulk offers are quotations. A separate confirmed order is still needed after quantity, quality and delivery are agreed.
-
-## Language, voice and AI
-
-- The farmer dashboard has a Tamil/English preference and a partial Tamil translation dictionary. The complete customer marketplace and every form are not yet fully translated.
-- Voice selling relies on browser Speech Recognition availability and device language support. Manual entry is always available.
-- Product-photo upload stores the image; it does not identify crops or assess quality.
-- The existing Farm AI assistant still uses demo responses unless a secure backend AI endpoint is configured. Do not treat demo demand or price suggestions as market facts.
+- **Live payments are disabled.** The current Razorpay integration is test mode only; the backend rejects `RAZORPAY_MODE=live`.
+- A cancelled/closed payment window is not a confirmed payment. Orders are only marked paid after server-side signature and provider-state verification.
+- **Automatic farmer payouts are disabled.** The payout endpoint reports reconciliation readiness; it does not transfer money.
+- COD is not collected by marking an order delivered. An authorised admin must confirm actual collection after checking an external collection record.
+- **Live Shiprocket booking is disabled** in this student pilot. The code requires an explicit logistics approval flag and a configured pickup point.
+- WhatsApp is off by default; messages are sent only to users who explicitly opt in and only through an approved template. A provider response does not confirm delivery.
+- Price data is a daily wholesale mandi reference in INR/quintal; the frontend converts it to INR/kg for display. It is not a farm-gate offer price or a continuous live feed.
+- No external LLM is connected to the Farm AI assistant. Do not present its older demo responses as factual predictions.
 
 ## Local development
 
@@ -160,20 +105,13 @@ Open `http://localhost:8000`. Keep `.env` private.
 
 ## Tests
 
-Run the API and phone tests:
-
 ```bash
 python -m compileall -q index.py tests
 python -m unittest discover -s tests -v
 ```
 
-The current tests cover API contracts, unauthenticated access, phone normalization and required frontend surfaces. They do not yet replace full end-to-end testing with two real accounts, SMS provider delivery, farmer approval, product uploads, order lifecycle and COD collection.
+CI also runs Python compilation and the API contract tests. Tests do not replace a full two-account end-to-end test involving a configured SMS provider, a farmer approval, product upload, stock reservation, test payment, order lifecycle and COD collection reconciliation.
 
-## Pilot approach
+## Real pilot
 
-Start with one local farmer organisation or FPO, a small produce cluster, a few household buyers and a few business buyers. Track completed transactions, repeat purchases, farmer earnings and order fulfilment. See [docs/FARMER_PILOT.md](docs/FARMER_PILOT.md).
-
-Relevant setup references:
-- [Supabase phone login and SMS configuration](https://supabase.com/docs/guides/auth/phone-login)
-- [Vercel Python runtime](https://vercel.com/docs/functions/runtimes/python)
-- [Vercel FastAPI deployment guide](https://vercel.com/kb/guide/ship-a-fastapi-app-on-vercel)
+The pilot is **not started**. Use [docs/FARMER_PILOT.md](docs/FARMER_PILOT.md) with a local FPO/cooperative or trusted farm group, a small buyer cohort, informed consent and an adult/college supervisor. Do not promise guaranteed sales, income or payouts.
