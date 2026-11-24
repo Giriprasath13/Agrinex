@@ -620,7 +620,15 @@ async def create_marketplace_product(body: ProductCreateRequest, authorization: 
 async def update_marketplace_product(product_id: str, body: ProductCreateRequest, authorization: str | None = Header(default=None)):
     token, profile = await _profile_from_header(authorization, "farmer")
     product_id = _uuid_or_422(product_id, "product ID")
-    fields = _safe_product_payload(body, profile, "active" if profile.get("farmer_status") == "approved" else "draft")
+    image_url = None
+    if body.image_base64:
+        image_url = await _upload_product_image(
+            token, profile["id"], body.image_filename or body.name,
+            body.image_mime_type or "image/jpeg", body.image_base64
+        )
+    fields = _safe_product_payload(body, profile, "active" if profile.get("farmer_status") == "approved" else "draft", image_url)
+    if image_url is None:
+        fields.pop("image_url", None)
     fields.pop("farmer_id", None)
     fields.pop("farmer_name", None)
     fields.pop("farmer_farm_name", None)
@@ -676,15 +684,68 @@ async def get_cart(authorization: str | None = Header(default=None)):
 async def add_cart_item(body: CartItemRequest, authorization: str | None = Header(default=None)):
     token, profile = await _profile_from_header(authorization, "customer")
     product_id = _uuid_or_422(body.product_id, "product ID")
-    # Upsert one cart row per product. Stock is checked again in the order transaction.
+    product_rows = await supabase_request(
+        "GET", "/rest/v1/agrinex_products",
+        access_token=token,
+        params={"select": "id,stock,status", "id": f"eq.{product_id}", "limit": "1"},
+    )
+    product = _first_row(product_rows)
+    if not product or product.get("status") != "active":
+        raise HTTPException(status_code=404, detail="This product is not currently available.")
     rows = await supabase_request(
+        "GET", "/rest/v1/agrinex_cart_items",
+        access_token=token,
+        params={"select": "id,quantity", "user_id": f"eq.{profile['id']}", "product_id": f"eq.{product_id}", "limit": "1"},
+    )
+    existing = _first_row(rows)
+    quantity = float(existing.get("quantity", 0) if existing else 0) + body.quantity
+    if quantity > float(product.get("stock") or 0):
+        raise HTTPException(status_code=409, detail=f"Only {product.get('stock')} units are currently available.")
+    if existing:
+        updated = await supabase_request(
+            "PATCH", "/rest/v1/agrinex_cart_items",
+            access_token=token,
+            params={"id": f"eq.{existing['id']}", "user_id": f"eq.{profile['id']}"},
+            payload={"quantity": quantity},
+            extra_headers={"Prefer": "return=representation"},
+        )
+        return _first_row(updated) or {"saved": True, "quantity": quantity}
+    created = await supabase_request(
         "POST", "/rest/v1/agrinex_cart_items",
         access_token=token,
-        params={"on_conflict": "user_id,product_id"},
-        payload={"user_id": profile["id"], "product_id": product_id, "quantity": body.quantity},
-        extra_headers={"Prefer": "resolution=merge-duplicates,return=representation"},
+        payload={"user_id": profile["id"], "product_id": product_id, "quantity": quantity},
+        extra_headers={"Prefer": "return=representation"},
     )
-    return _first_row(rows) or {"saved": True}
+    return _first_row(created) or {"saved": True, "quantity": quantity}
+
+
+@app.patch("/api/cart/{product_id}")
+async def set_cart_item_quantity(product_id: str, body: CartItemRequest,
+                                 authorization: str | None = Header(default=None)):
+    token, profile = await _profile_from_header(authorization, "customer")
+    product_id = _uuid_or_422(product_id, "product ID")
+    if _uuid_or_422(body.product_id, "product ID") != product_id:
+        raise HTTPException(status_code=422, detail="Cart product IDs do not match.")
+    product_rows = await supabase_request(
+        "GET", "/rest/v1/agrinex_products",
+        access_token=token,
+        params={"select": "id,stock,status", "id": f"eq.{product_id}", "limit": "1"},
+    )
+    product = _first_row(product_rows)
+    if not product or product.get("status") != "active":
+        raise HTTPException(status_code=404, detail="This product is no longer available.")
+    if body.quantity > float(product.get("stock") or 0):
+        raise HTTPException(status_code=409, detail=f"Only {product.get('stock')} units are currently available.")
+    rows = await supabase_request(
+        "PATCH", "/rest/v1/agrinex_cart_items",
+        access_token=token,
+        params={"user_id": f"eq.{profile['id']}", "product_id": f"eq.{product_id}"},
+        payload={"quantity": body.quantity},
+        extra_headers={"Prefer": "return=representation"},
+    )
+    if not _first_row(rows):
+        raise HTTPException(status_code=404, detail="Cart item not found.")
+    return _first_row(rows)
 
 
 @app.delete("/api/cart/{product_id}")
@@ -737,13 +798,19 @@ async def create_address(body: AddressCreateRequest, authorization: str | None =
 
 @app.get("/api/orders")
 async def get_customer_orders(authorization: str | None = Header(default=None)):
-    token, profile = await _profile_from_header(authorization, "customer")
+    token, profile = await _profile_from_header(authorization)
+    if profile.get("role") == "customer":
+        owner_filter = {"buyer_id": f"eq.{profile['id']}"}
+    elif profile.get("role") == "farmer":
+        owner_filter = {"farmer_id": f"eq.{profile['id']}"}
+    else:
+        raise HTTPException(status_code=403, detail="This account cannot access marketplace orders.")
     return await supabase_request(
         "GET", "/rest/v1/agrinex_orders",
         access_token=token,
         params={
             "select": "id,order_number,buyer_id,farmer_id,status,subtotal,delivery_fee,total,payment_method,payment_status,delivery_address,created_at,items:agrinex_order_items(id,product_id,farmer_id,product_name,unit,quantity,unit_price,market_price,line_total,status)",
-            "buyer_id": f"eq.{profile['id']}",
+            **owner_filter,
             "order": "created_at.desc",
             "limit": "100",
         },
