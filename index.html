@@ -1316,7 +1316,7 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
     registerForm.hidden=mode!=='register';
     document.getElementById(prefix+'LoginTab').classList.toggle('active',mode==='login');
     document.getElementById(prefix+'RegisterTab').classList.toggle('active',mode==='register');
-    registerForm.querySelectorAll('.auth-field').forEach(el=>{el.hidden=pending;});
+    registerForm.querySelectorAll(':scope > .auth-field').forEach(el=>{el.hidden=pending;});
     const submit=registerForm.querySelector(':scope > .auth-submit');if(submit)submit.hidden=pending;
     const otpPanel=document.getElementById(prefix+'RegisterOtp');if(otpPanel)otpPanel.hidden=!pending;
     authSetStatus(role,'login','');authSetStatus(role,'register','');authSetOtpStatus(role,'');
@@ -1367,7 +1367,7 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
       const d=await api('/api/auth/register',{method:'POST',body:JSON.stringify({phone,name,password,role,farm_name:farmName||null})});
       if(!d?.verification_required)throw new Error('The server did not confirm that SMS verification is required.');
       authOtpState[role]=phone;
-      form.querySelectorAll('.auth-field').forEach(el=>{el.hidden=true;});
+      form.querySelectorAll(':scope > .auth-field').forEach(el=>{el.hidden=true;});
       if(button)button.hidden=true;
       document.getElementById(prefix+'RegisterOtp').hidden=false;
       authSetStatus(role,'register','');
@@ -1398,7 +1398,7 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
       authOtpState[role]=null;
       authStoreSession(d);
       document.getElementById(prefix+'RegisterForm').reset();
-      document.getElementById(prefix+'RegisterForm').querySelectorAll('.auth-field').forEach(el=>{el.hidden=false;});
+      document.getElementById(prefix+'RegisterForm').querySelectorAll(':scope > .auth-field').forEach(el=>{el.hidden=false;});
       const submit=document.querySelector('#'+prefix+'RegisterForm > .auth-submit');if(submit)submit.hidden=false;
       document.getElementById(prefix+'RegisterOtp').hidden=true;
       await authAfterSession(role,'verify');
