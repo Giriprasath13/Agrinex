@@ -511,6 +511,72 @@
 @media(max-width:900px){.auth-layout{grid-template-columns:minmax(245px,.72fr) minmax(420px,1.28fr)}.auth-visual{padding:30px 25px}.auth-main{padding:20px 28px}}
 @media(max-width:680px){.auth-layout{display:block}.auth-visual{display:none}.auth-main{padding:13px 19px;min-height:100svh}.auth-content{padding:26px 0;margin:auto}.auth-role-grid{grid-template-columns:1fr}.auth-role-card{min-height:165px;padding:17px}.auth-role-card strong{margin-top:10px}.auth-role-cta{padding-top:10px}.auth-top{min-height:42px}}
 </style>
+
+<style id="agrinex-product-detail-page">
+#productDetailDialog.product-detail-modal{width:min(1060px,96vw)!important;max-height:94vh!important;overflow-y:auto!important;overscroll-behavior:contain}
+.product-detail-head{padding:17px 22px;background:#fff;box-shadow:0 5px 18px rgba(18,52,30,.04)}
+.product-detail-head h3{margin-top:3px}
+.product-detail-eyebrow{display:block;color:#688071;font-size:9px;font-weight:900;letter-spacing:1px;text-transform:uppercase}
+.product-detail-body{padding:22px}
+.product-detail-grid{align-items:start;grid-template-columns:minmax(0,1fr) minmax(340px,.95fr)}
+.product-detail-visual{display:grid;gap:12px;min-width:0}
+.product-detail-image{height:370px}
+.product-detail-image .image-fallback{position:absolute;inset:0;align-content:center}
+.pd-farmer-card{display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--line);border-radius:15px;background:#fbfdfb}
+.pd-farmer-icon{width:39px;height:39px;display:grid;place-items:center;border-radius:12px;background:#edf7ef;font-size:21px;flex:none}
+.pd-farmer-card strong,.pd-farmer-card span{display:block}
+.pd-farmer-card strong{font-size:12px;color:#1d3526}
+.pd-farmer-card div:nth-child(2) span{margin-top:3px;font-size:10px;color:#168044;font-weight:800}
+.pd-farmer-distance{margin-left:auto;font-size:10px;color:#65756a;white-space:nowrap}
+.product-detail-side{min-width:0}
+.product-detail-tags{margin-bottom:12px}
+.product-detail-title{font-size:30px}
+.product-detail-stats{margin-top:16px}
+.pd-actions{grid-template-columns:1.2fr 1fr;gap:8px}
+.pd-actions .btn{min-height:44px}
+.pd-info-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:22px}
+.pd-info-card{padding:16px;border:1px solid var(--line);border-radius:16px;background:#fbfdfb}
+.pd-info-card h4{font-size:13px;color:#1b3826;margin-bottom:8px}
+.pd-info-card p{font-size:11px;line-height:1.65;color:#596b5f}
+.pd-info-label{margin-top:13px;margin-bottom:5px;font-size:9px;font-weight:900;color:#17703d;text-transform:uppercase;letter-spacing:.45px}
+.pd-section-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:12px}
+.pd-section-heading h4{font-size:17px;margin:4px 0;color:#183024}
+.pd-section-heading p{font-size:10px;color:#728177}
+.pd-related-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.pd-related-card{min-width:0;border:1px solid var(--line);border-radius:15px;overflow:hidden;background:#fff}
+.pd-related-main{display:block;width:100%;padding:0;border:0;background:transparent;text-align:left;color:inherit}
+.pd-related-image{height:112px;position:relative;overflow:hidden;background:#eff6f0}
+.pd-related-image img{width:100%;height:100%;object-fit:cover;display:block}
+.pd-related-emoji{display:none;position:absolute;inset:0;place-items:center;font-size:42px;background:#eff6f0}
+.pd-related-copy{display:grid;gap:4px;padding:10px 10px 4px}
+.pd-related-copy strong{font-size:11px;color:#203829;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pd-related-copy span{font-size:10px;font-weight:900;color:#146b38}
+.pd-related-copy small{font-size:9px;color:#78857c}
+.pd-related-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:8px}
+.pd-related-actions .btn{min-height:34px;padding:7px 5px;font-size:9px}
+.product-detail-reviews{gap:9px}
+.pd-review small{display:block;margin-top:5px;color:#829087;font-size:9px}
+@media(max-width:760px){
+ #productDetailsModal.overlay.show{padding:0;align-items:flex-end}
+ #productDetailDialog.product-detail-modal{width:100vw!important;max-height:96svh!important;border-radius:21px 21px 0 0!important}
+ .product-detail-head{padding:14px 16px}
+ .product-detail-body{padding:14px 14px 22px}
+ .product-detail-grid{grid-template-columns:1fr;gap:14px}
+ .product-detail-image{height:260px}
+ .product-detail-title{font-size:25px}
+ .product-detail-stats{grid-template-columns:1fr 1fr}
+ .pd-info-grid{grid-template-columns:1fr}
+ .pd-related-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .pd-section-heading{align-items:flex-start}
+}
+@media(max-width:430px){
+ .product-detail-image{height:230px}
+ .pd-farmer-distance{font-size:9px}
+ .pd-related-image{height:100px}
+ .pd-actions{grid-template-columns:1fr 1fr}
+}
+</style>
+
 </head>
 <body>
 <div class="app">
@@ -952,7 +1018,58 @@ function getProductReviews(id){return reviews.filter(r=>r.productId===id)}
 function getProductRating(id){const rs=getProductReviews(id);if(!rs.length)return null;return rs.reduce((a,r)=>a+r.rating,0)/rs.length}
 function canReviewProduct(id){return orders.some(o=>o.status==='Delivered'&&(o.orderItems||[]).some(it=>it.productId===id))}
 function submitReview(id){const rating=Number(prompt('Rating from 1 to 5','5'));const comment=prompt('Review comment','Fresh and good quality.');if(!Number.isInteger(rating)||rating<1||rating>5||!comment||!comment.trim()){toast('Enter a valid rating and comment');return}if(!canReviewProduct(id)){toast('Reviews are only available after a delivered purchase.');return}reviews.push({id:makeId('R'),productId:id,userId:currentUser?.contact||'guest',orderId:orders.find(o=>o.status==='Delivered'&&(o.orderItems||[]).some(it=>it.productId===id))?.id,rating,comment:comment.trim(),date:new Date().toISOString()});storage.set('ff_reviews',reviews);renderMarketplace();renderWishlist();renderHome();openProductDetails(id);toast('Verified purchase review added')}
-function openProductDetails(id){const p=products.find(x=>x.id===id);if(!p)return;const rs=getProductReviews(id);const rating=getProductRating(id);const marketSave=Math.max(0,p.market-p.price);$('productDetailsContent').innerHTML=`<div class="modal-head"><h3>${safe(p.name)}</h3><button class="close" onclick="closeProductDetails()">×</button></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:13px"><div><div class="product-img" style="height:300px;border-radius:16px">${p.image?`<img src="${safe(p.image)}" alt="${safe(p.name)}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'">`:''}<div class="image-fallback" ${p.image?'':'style="display:grid"'}>${p.emoji}</div></div></div><div><span class="eyebrow">${p.verified?'✓ Verified farmer':'Demo listing'}</span><h2 style="margin-top:10px">₹${p.price}/${safe(p.unit||'unit')}</h2><p class="small">Market reference ₹${p.market} • You save ₹${marketSave}</p><p style="margin-top:12px;font-size:11px"><b>Farmer:</b> ${safe(p.farmer)}<br><b>Location:</b> ${safe(p.distance)} km away<br><b>Harvest:</b> ${safe(p.fresh)}<br><b>Delivery:</b> ${safe(p.delivery)}<br><b>Stock:</b> ${p.stock} ${safe(p.unit||'unit')} available</p><div class="modal-actions"><button class="btn btn-primary" ${p.stock?'':'disabled'} onclick="addToCartById('${p.id}');closeProductDetails()">Add to cart</button><button class="btn btn-soft" ${p.stock?'':'disabled'} onclick="buyNowById('${p.id}')">Buy now</button><button class="btn btn-soft" onclick='closeProductDetails();showFarmerProfile(${JSON.stringify(p.farmer)})'>Farmer profile</button><button class="btn btn-light" onclick="toggleWish('${p.id}')">${wish.includes(p.id)?'♥ Saved':'♡ Wishlist'}</button></div></div></div><div style="margin-top:18px;border-top:1px solid var(--line);padding-top:15px"><h3>Reviews ${rating?`• ⭐ ${rating.toFixed(1)}`:'• No reviews yet'}</h3>${rs.length?rs.map(r=>`<div style="padding:10px 0;border-bottom:1px solid var(--line);font-size:10px"><b>⭐ ${r.rating}/5</b> • Verified purchase<br>${safe(r.comment)}<div class="small">${new Date(r.date).toLocaleDateString('en-IN')}</div></div>`).join(''):'<p class="small" style="margin-top:8px">Reviews will appear here after verified purchases.</p>'}${canReviewProduct(id)?`<button class="btn btn-light" style="margin-top:10px" onclick="submitReview('${p.id}')">Write verified review</button>`:''}</div>`;$('productDetailsModal').classList.add('show');$('productDetailsModal').setAttribute('aria-hidden','false')}
+function getProductGuide(p){
+ const name=String(p.name||"").toLowerCase();
+ if(name.includes("tomato"))return {about:"Tomatoes are juicy, mildly tangy produce used in salads, curries, chutneys, soups and sauces.",nutrition:"Tomatoes provide vitamin C and contain lycopene, a naturally occurring plant pigment with antioxidant activity.",choose:"Choose firm tomatoes with smooth skin. Avoid produce that is leaking, mouldy or has deep soft spots.",storage:"Keep firm, unripe tomatoes at room temperature away from direct sunlight. Refrigerate very ripe tomatoes when you need to keep them longer.",uses:"Add them to fresh salads, sambar, rasam, pasta sauce, chutney or everyday curries."};
+ if(name.includes("carrot"))return {about:"Carrots are crisp root vegetables with a naturally sweet flavour. They work well raw or cooked.",nutrition:"Carrots contain beta-carotene, which the body can convert into vitamin A, along with fibre.",choose:"Look for firm carrots with an even colour and no mushy or cracked areas.",storage:"Refrigerate carrots in a produce bag or container. Remove leafy tops before storing if they are attached.",uses:"Enjoy them raw, grated into salads, roasted, or added to poriyal, soups and kurma."};
+ if(name.includes("potato"))return {about:"Potatoes are versatile starchy tubers used in many everyday meals.",nutrition:"Potatoes provide carbohydrates, potassium and vitamin C. Nutrient content varies with variety and preparation.",choose:"Choose firm potatoes without soft spots, mould or extensive green areas.",storage:"Store in a cool, dry and well-ventilated place away from direct sunlight. Do not store them in a sealed damp bag.",uses:"Use them in masala, poriyal, roast, curry, soups or as a filling."};
+ if(name.includes("spinach"))return {about:"Spinach is a tender leafy green that cooks quickly and can also be eaten raw when washed properly.",nutrition:"Spinach provides folate and vitamin K, and contains non-haem iron and fibre.",choose:"Choose leaves that look fresh and crisp. Avoid slimy, yellowing or badly wilted leaves.",storage:"Keep spinach dry and refrigerated in a breathable bag or container. Wash just before use for better storage life.",uses:"Add it to keerai kootu, dal, soups, omelettes, smoothies or sautéed dishes."};
+ if(name.includes("onion"))return {about:"Onions are flavourful bulbs used as a base for many savoury dishes.",nutrition:"Onions contain fibre and naturally occurring plant compounds, including sulfur-containing compounds.",choose:"Choose firm bulbs with dry outer skins and no soft, wet or mouldy areas.",storage:"Keep whole onions in a cool, dry and ventilated place. Refrigerate cut onion in a covered container.",uses:"Use them in sambar, curry, salads, chutneys, stir-fries and gravies."};
+ if(name.includes("brinjal")||name.includes("eggplant"))return {about:"Brinjal, also called eggplant, has a soft texture when cooked and absorbs the flavours of spices and sauces.",nutrition:"Brinjal provides dietary fibre and contains naturally occurring plant compounds, especially in its skin.",choose:"Choose firm brinjals with smooth, glossy skin and a fresh-looking stem. Avoid soft or damaged patches.",storage:"Refrigerate brinjal in the produce drawer and use it soon after purchase.",uses:"Try it in kathirikai sambar, poriyal, roast, stuffed brinjal or curry."};
+ if(name.includes("capsicum")||name.includes("bell pepper"))return {about:"Capsicum is a crisp pepper with a mild, sweet flavour. Green, red and yellow varieties suit many dishes.",nutrition:"Capsicum is a source of vitamin C. The exact nutrient content varies by colour and ripeness.",choose:"Choose firm peppers with glossy, unwrinkled skin and a fresh stem.",storage:"Keep capsicum refrigerated in the vegetable drawer and avoid washing it until you are ready to use it.",uses:"Add it to salads, fried rice, noodles, kurma, pizza or vegetable stir-fries."};
+ if(name.includes("cauliflower"))return {about:"Cauliflower is a mild-flavoured vegetable made up of compact edible florets.",nutrition:"Cauliflower provides vitamin C and dietary fibre.",choose:"Look for a compact head with firm florets and no dark, wet or mouldy patches.",storage:"Refrigerate it in a loose or perforated bag and keep it dry until use.",uses:"Use it in gobi masala, kurma, poriyal, soup or roasted vegetable dishes."};
+ if(p.category==="Fruits")return {about:"Fresh fruit is a convenient ingredient for snacks, breakfast and desserts. Check the fruit for its natural aroma, firmness and signs of damage.",nutrition:"Fruits provide varying amounts of fibre, vitamins, minerals and naturally occurring sugars depending on the variety.",choose:"Choose fruit with the expected colour and firmness for its variety. Avoid mould, leaking or extensive bruising.",storage:"Storage needs vary by fruit. Keep cut fruit covered and refrigerated, and follow the guidance for the specific variety.",uses:"Enjoy it fresh, add it to breakfast, blend it into smoothies or use it in fruit salads."};
+ return {about:"Fresh produce is harvested for everyday cooking and can be used in a variety of home recipes.",nutrition:"Nutrient content depends on the produce variety, growing conditions, freshness and preparation.",choose:"Choose produce that feels firm for its variety and has no mould, leaking or extensive damaged areas.",storage:"Keep produce clean and dry, and refrigerate items that are normally stored chilled. Follow variety-specific storage needs.",uses:"Wash appropriately before preparing, then add it to salads, curries, soups or other favourite dishes."};
+}
+function getRelatedProducts(p){
+ return products.filter(x=>x.id!==p.id&&Number(x.stock)>0).map(x=>({product:x,score:(x.category===p.category?5:0)+(x.organic===p.organic?2:0)+(x.verified?1:0)})).sort((a,b)=>b.score-a.score||Number(a.product.distance||999)-Number(b.product.distance||999)||Number(a.product.price||0)-Number(b.product.price||0)).slice(0,4).map(x=>x.product);
+}
+function productDetailRelatedCard(p){
+ const encodedId=encodeURIComponent(String(p.id)).replace(/'/g,"%27");
+ const image=p.image?'<img src="'+safe(p.image)+'" alt="'+safe(p.name)+'" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'grid\'">':"";
+ const fallback=p.image?"":"style=\"display:grid\"";
+ return '<article class="pd-related-card"><button class="pd-related-main" onclick="openProductDetails(decodeURIComponent(\''+encodedId+'\'))"><div class="pd-related-image">'+image+'<div class="pd-related-emoji" '+fallback+'>'+safe(p.emoji||"🥬")+'</div></div><div class="pd-related-copy"><strong>'+safe(p.name)+'</strong><span>₹'+Number(p.price||0)+'/'+safe(p.unit||"unit")+' • '+safe(p.farmer||"Local farmer")+'</span><small>'+(p.verified?"✓ Verified farmer":"Fresh listing")+' • '+safe(p.distance||"—")+' km away</small></div></button><div class="pd-related-actions"><button class="btn btn-light" onclick="openProductDetails(decodeURIComponent(\''+encodedId+'\'))">View details</button><button class="btn btn-primary" '+(Number(p.stock)>0?"":"disabled")+' onclick="addToCartById(decodeURIComponent(\''+encodedId+'\'))">Add</button></div></article>';
+}
+function openProductDetails(id){
+ const p=products.find(x=>x.id===id);if(!p)return;
+ const rs=getProductReviews(id);const rating=getProductRating(id);const marketSave=Math.max(0,Number(p.market||0)-Number(p.price||0));const percentSave=p.market>0?Math.max(0,Math.round((1-p.price/p.market)*100)):0;const guide=getProductGuide(p);const related=getRelatedProducts(p);
+ const encodedId=encodeURIComponent(String(p.id)).replace(/'/g,"%27");const encodedFarmer=encodeURIComponent(String(p.farmer||"")).replace(/'/g,"%27");
+ const image=p.image?'<img src="'+safe(p.image)+'" alt="'+safe(p.name)+'" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'grid\'">':"";
+ const fallback=p.image?"":"style=\"display:grid\"";
+ const reviewMarkup=rs.length?rs.map(r=>'<article class="pd-review"><strong>⭐ '+safe(r.rating)+'/5 • Verified purchase</strong><p>'+safe(r.comment)+'</p><small>'+safe(new Date(r.date).toLocaleDateString("en-IN"))+'</small></article>').join(""):'<p class="small">No customer reviews yet. Verified-purchase reviews will appear here.</p>';
+ const relatedMarkup=related.length?related.map(productDetailRelatedCard).join(""):'<p class="small">No similar products are available right now. Browse the marketplace for more fresh produce.</p>';
+ const html=[
+ '<div class="product-detail-head"><div><span class="product-detail-eyebrow">AGRINEX • PRODUCT DETAILS</span><h3>'+safe(p.name)+'</h3></div><button class="product-detail-close" aria-label="Close product details" onclick="closeProductDetails()">×</button></div>',
+ '<div class="product-detail-body">',
+ '<div class="product-detail-grid">',
+ '<div class="product-detail-visual"><div class="product-detail-image">'+image+'<div class="image-fallback" '+fallback+'>'+safe(p.emoji||"🥬")+'</div><span class="product-detail-badge">'+(p.organic?"🌱 ORGANIC":"🌿 FRESH PRODUCE")+'</span></div><div class="pd-farmer-card"><div class="pd-farmer-icon">👨‍🌾</div><div><strong>'+safe(p.farmer||"Local farmer")+'</strong><span>'+(p.verified?"✓ Verified farmer":"Farmer verification not shown")+'</span></div><span class="pd-farmer-distance">📍 '+safe(p.distance||"—")+' km</span></div></div>',
+ '<div class="product-detail-side"><div class="product-detail-tags">'+(p.verified?'<span class="product-detail-tag">✓ Verified Farmer</span>':'')+(p.organic?'<span class="product-detail-tag">🌱 Organic</span>':'')+'<span class="product-detail-tag">🌾 '+safe(p.fresh||"Fresh listing")+'</span></div>',
+ '<h1 class="product-detail-title">'+safe(p.name)+'</h1><div class="product-detail-rating">'+(rating?"⭐ "+rating.toFixed(1)+" from customer reviews":"☆ No customer rating yet")+' • '+safe(p.category||"Fresh produce")+'</div>',
+ '<div class="product-detail-price"><strong>₹'+Number(p.price||0)+'/'+safe(p.unit||"unit")+'</strong><del>₹'+Number(p.market||0)+'</del><span class="product-detail-save">Save '+percentSave+'%</span></div>',
+ '<div class="product-detail-note">💚 You save ₹'+marketSave+' compared with the market reference price.</div>',
+ '<div class="product-detail-stats"><div class="pd-stat"><span>Availability</span><strong>'+(p.stock>0?safe(p.stock)+" "+safe(p.unit||"units")+" available":"Out of stock")+'</strong></div><div class="pd-stat"><span>Harvest status</span><strong>'+safe(p.fresh||"Not specified")+'</strong></div><div class="pd-stat"><span>Farmer distance</span><strong>'+safe(p.distance||"—")+' km</strong></div><div class="pd-stat"><span>Delivery window</span><strong>'+safe(p.delivery||"To be confirmed")+'</strong></div></div>',
+ '<div class="pd-actions"><button class="btn btn-primary" '+(p.stock>0?"":"disabled")+' onclick="addToCartById(decodeURIComponent(\''+encodedId+'\'));closeProductDetails()">Add to cart</button><button class="btn btn-soft" '+(p.stock>0?"":"disabled")+' onclick="buyNowById(decodeURIComponent(\''+encodedId+'\'))">Buy now</button><button class="btn btn-light" onclick="closeProductDetails();showFarmerProfile(decodeURIComponent(\''+encodedFarmer+'\'))">Farmer profile</button><button class="btn btn-light" onclick="toggleWish(decodeURIComponent(\''+encodedId+'\'));openProductDetails(decodeURIComponent(\''+encodedId+'\'))">'+(wish.includes(id)?"♥ Saved":"♡ Save item")+'</button></div>',
+ '</div></div>',
+ '<div class="pd-info-grid"><section class="pd-info-card"><h4>About this produce</h4><p>'+guide.about+'</p><div class="pd-info-label">Nutrition highlights</div><p>'+guide.nutrition+'</p></section><section class="pd-info-card"><h4>How to choose fresh quality</h4><p>'+guide.choose+'</p><div class="pd-info-label">Storage guidance</div><p>'+guide.storage+'</p></section><section class="pd-info-card"><h4>Ways to use it</h4><p>'+guide.uses+'</p><div class="pd-info-label">Before you prepare</div><p>Rinse fresh produce under clean running water and remove damaged portions. No health or shelf-life guarantee is implied by this listing.</p></section></div>',
+ '<section class="product-detail-section"><div class="pd-section-heading"><div><span class="product-detail-eyebrow">MORE FROM THE MARKETPLACE</span><h4>Related fresh picks</h4><p>Similar products currently listed by AgriNex farmers.</p></div><button class="linkbtn" onclick="closeProductDetails();showPage(\'marketplace\')">View all →</button></div><div class="pd-related-grid">'+relatedMarkup+'</div></section>',
+ '<section class="product-detail-section"><div class="pd-section-heading"><div><h4>Customer reviews</h4><p>Feedback from completed orders.</p></div>'+(canReviewProduct(id)?'<button class="btn btn-light" onclick="submitReview(decodeURIComponent(\''+encodedId+'\'))">Write a review</button>':'')+'</div><div class="product-detail-reviews">'+reviewMarkup+'</div></section>',
+ '<div class="product-detail-footer">Listing details such as price, quantity, harvest status and delivery window are supplied by the seller and may change before checkout.</div>',
+ '</div>'
+ ].join("");
+ $("productDetailsContent").innerHTML=html;
+ $("productDetailsModal").classList.add("show");
+ $("productDetailsModal").setAttribute("aria-hidden","false");
+}
 function closeProductDetails(){$('productDetailsModal').classList.remove('show');$('productDetailsModal').setAttribute('aria-hidden','true')}
 function productCard(p){const pid=p.id;const save=Math.max(0,Math.round((1-p.price/p.market)*100));const rupeeSave=Math.max(0,p.market-p.price);const low=p.stock<=20;return `<div class="card product-card"><div class="product-img"><span class="pill">${p.organic?'🌱 ORGANIC':'FRESH TODAY'}</span><button class="heart" aria-label="Wishlist" onclick="toggleWish('${pid}')">${wish.includes(pid)?'❤️':'♡'}</button>${p.image?`<img src="${safe(p.image)}" alt="${safe(p.name)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='grid'"><div class="image-fallback">${p.emoji}</div>`:`<div class="image-fallback" style="display:grid">${p.emoji}</div>`}</div><div class="product-info"><h3>${safe(p.name)}</h3><div class="farmer">👨‍🌾 ${safe(p.farmer)} ${p.verified?'<span class="verified-mark">✓ Verified</span>':''}</div><div class="product-proof">${p.verified?'<span class="proof-badge">✓ Verified Farmer</span>':''}${p.organic?'<span class="proof-badge org">🌱 Organic</span>':''}<span class="proof-badge">🚚 ${safe(p.delivery)}</span></div><div class="meta"><span>${getProductRating(p.id)?'⭐ '+getProductRating(p.id).toFixed(1):'☆ New'}</span><span>📍 ${p.distance} km</span><span>🌾 ${safe(p.fresh)}</span></div><div class="price-row"><span class="price">₹${p.price}/${p.unit||'unit'}</span><span class="old">₹${p.market}</span><span class="save">Save ${save}%</span></div><div class="product-saving">💚 You save ₹${rupeeSave} vs market price before checkout</div><div class="stock ${low?'low':'ok'}">${p.stock===0?'❌ Out of stock':low?'⚠️ Only '+p.stock+' '+(p.unit||'units')+' left':'✓ '+p.stock+' '+(p.unit||'units')+' available'}</div><div class="card-actions"><button class="btn btn-primary" ${p.stock===0?'disabled':''} onclick="addToCartById('${pid}')">Add to cart</button><button class="btn btn-light" onclick="openProductDetails('${pid}')">Details</button></div></div></div>`}
 function toggleMobileMenu(){const m=$('mobileMenu');if(m)m.classList.toggle('show')}
