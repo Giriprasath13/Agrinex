@@ -1895,6 +1895,17 @@ async def import_market_prices(rows: list[dict], authorization: str | None = Hea
 
 
 
+@app.post("/api/admin/orders/{order_id}/cod-collected")
+async def admin_confirm_cod_collection(order_id: str, authorization: str | None = Header(default=None)):
+    token, _ = await _profile_from_header(authorization)
+    order_id = _uuid_or_422(order_id, "order ID")
+    return await supabase_request(
+        "POST", "/rest/v1/rpc/admin_confirm_agrinex_cod_collection",
+        access_token=token,
+        payload={"p_order_id": order_id},
+    )
+
+
 @app.get("/api/marketplace/health")
 async def marketplace_health():
     razorpay_ready = all(os.getenv(k, "").strip() for k in (
