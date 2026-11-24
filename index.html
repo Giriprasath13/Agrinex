@@ -820,7 +820,34 @@
 
     <section class="page" id="notifications"><div class="section-head"><div><h2>Notifications</h2><p>Order, stock and price alerts in one place.</p></div><button class="btn btn-light" onclick="clearNotifications()">Mark all read</button></div><div class="card" id="notificationsList"></div></section>
 
-    <section class="page" id="ai"><div class="section-head"><div><h2>Farm AI</h2><p>Task-oriented help for farmers and consumers. This frontend uses demo responses; connect your AI/API key for live intelligence.</p></div><span class="location-chip">🤖 AI Assistant</span></div><div class="api-note" style="margin:0 0 12px">API-ready: set <b>localStorage.ff_ai_endpoint</b> to your secure backend endpoint. <button class="btn btn-light" style="float:right;padding:5px 8px;font-size:9px" onclick="const u=prompt('FastAPI base URL',getApiBase()||'http://localhost:8000');if(u!==null){storage.set('ff_api_base',u.trim());checkApiHealth()}" >Configure backend</button> Never put an LLM secret directly in this HTML.</div><div class="ai-grid"><div class="quick-ai"><button class="quick-card" onclick="askAI('What should I price my tomato?')"><b>💰 Tomato price</b><span>Recommend a price</span></button><button class="quick-card" onclick="askAI('Weather for my farm')"><b>🌦️ Farm weather</b><span>Advisory placeholder</span></button><button class="quick-card" onclick="askAI('Which crop should I grow?')"><b>🌾 Crop recommendation</b><span>Choose crops by conditions</span></button><button class="quick-card" onclick="askAI('What is today\'s demand?')"><b>📈 Today's demand</b><span>Demand signal placeholder</span></button><button class="quick-card" onclick="askAI('Find cheapest vegetables')"><b>🛒 Cheapest vegetables</b><span>Consumer shopping help</span></button><button class="quick-card" onclick="askAI('Find farmers nearby')"><b>📍 Farmers nearby</b><span>Compare distance</span></button></div><div class="card chat"><div class="chat-head"><div><b>🌱 Farm AI</b><div class="small">Natural-language assistant</div></div><button class="btn btn-light" onclick="clearChat()">Clear</button></div><div class="chat-body" id="chatBody"><div class="bubble ai">Hello! I can help with pricing, demand, crop planning, delivery-friendly shopping and marketplace comparisons. Try a task above.</div></div><div class="chat-input"><input id="aiInput" placeholder="Ask anything..." onkeydown="if(event.key==='Enter')sendAI()"><button class="btn btn-primary" onclick="sendAI()">➤</button></div></div></div></section>
+    <section class="page" id="ai">
+  <div class="section-head">
+    <div>
+      <h2>Farm Data Assistant · Preview</h2>
+      <p>Catalogue lookup and evidence-based guidance. An external AI model is not connected.</p>
+    </div>
+    <span class="location-chip">📊 Data assistant</span>
+  </div>
+  <div class="api-note" style="margin:0 0 12px">
+    This preview does not generate current weather, crop, price or city-wide demand forecasts.
+    Use the Farmer dashboard's verified daily mandi observations and AgriNex order-history panels.
+  </div>
+  <div class="ai-grid">
+    <div class="quick-ai">
+      <button class="quick-card" onclick="askAI('Show current tomato listings')"><b>🥬 Current listings</b><span>Catalogue prices only</span></button>
+      <button class="quick-card" onclick="askAI('What is my AgriNex demand?')"><b>📈 My order history</b><span>Seller account records</span></button>
+      <button class="quick-card" onclick="askAI('Show verified mandi data')"><b>💰 Verified mandi data</b><span>Dated wholesale observations</span></button>
+      <button class="quick-card" onclick="askAI('Weather for my farm')"><b>🌦️ Weather</b><span>Not connected</span></button>
+      <button class="quick-card" onclick="askAI('Which crop should I grow?')"><b>🌾 Crop planning</b><span>No validated model</span></button>
+      <button class="quick-card" onclick="askAI('Find farmers nearby')"><b>📍 Farmer discovery</b><span>Browse verified listings</span></button>
+    </div>
+    <div class="card chat">
+      <div class="chat-head"><div><b>🌱 Farm Data Assistant</b><div class="small">Catalogue lookup · no LLM connected</div></div><button class="btn btn-light" onclick="clearChat()">Clear</button></div>
+      <div class="chat-body" id="chatBody"><div class="bubble ai">Hello. I can look up current AgriNex catalogue listings. Verified mandi observations and your own order history are available in the Farmer dashboard when those data sources have been configured.</div></div>
+      <div class="chat-input"><input id="aiInput" placeholder="Ask about current AgriNex listings..." onkeydown="if(event.key==='Enter')sendAI()"><button class="btn btn-primary" onclick="sendAI()">➤</button></div>
+    </div>
+  </div>
+</section>
   <section class="page" id="admin"><div class="section-head"><div><h2>AgriNex administration</h2><p>Restricted to user IDs explicitly added to the private administrator allowlist in Supabase.</p></div><button class="btn btn-light" onclick="loadAdminConsole()">↻ Refresh queue</button></div><div id="adminAccessStatus" class="api-note">Checking administrator access…</div>
       <div class="card admin-market-import" style="margin-top:14px" id="adminPriceImportPanel">
         <h3>Daily AGMARKNET market-price sync</h3>
@@ -1111,7 +1138,7 @@ let currentUser=storage.get('ff_user',null);
 let cart=[];let wish=[];
 let addresses=[];
 let currentCategory='All';let checkoutStep=1;let selectedAddress=0;let selectedPayment='COD';let trackingIndex=0;
-const defaultNotifications=[{icon:'🚚',title:'Order on the way',text:'Order #FF10261 is expected to arrive today.',unread:true},{icon:'💰',title:'Price update',text:'Tomato demand near you increased 8%.',unread:true},{icon:'📦',title:'Inventory warning',text:'Organic carrots have 18 kg left.',unread:true},{icon:'✅',title:'Farmer verified',text:'Green Leaf Farm completed farm verification.',unread:false}];
+const defaultNotifications=[];
 let notifications=storage.get('ff_notifications',[])||[];
 let reviews=storage.get('ff_reviews',[])||[];
 let orders=[];
@@ -1335,15 +1362,49 @@ function addProduct(){const n=$('newName').value.trim();const p=Number($('newPri
 function saveAddress(){const label=$('addrLabel').value;const name=$('addrName').value.trim();const mobile=$('addrMobile').value.trim();const text=$('addrText').value.trim();const city=$('addrCity').value.trim();const state=$('addrState').value.trim();const pin=$('addrPin').value.trim();if(!name||!text||!city||!state||!/^[0-9]{10}$/.test(mobile)||!/^[0-9]{6}$/.test(pin)){toast('Enter name, valid 10-digit mobile, address, city, state and 6-digit pincode');return}addresses.push({label,name,mobile,text,city,state,pin});selectedAddress=addresses.length-1;persist();closeModals();toast('Address saved');if(checkoutStep===2)renderCheckout()}
 function submitFarmer(){const n=$('farmName').value.trim();const b=$('farmBusiness').value.trim();if(!n||!b){toast('Enter farmer and farm name');return}if($('farmMobile').value.trim()&&!/^[0-9]{10}$/.test($('farmMobile').value.trim())){toast('Enter a valid 10-digit mobile number');return}if($('farmPin').value.trim()&&!/^[0-9]{6}$/.test($('farmPin').value.trim())){toast('Enter a valid 6-digit farm pincode');return}closeModals();notifications.unshift({icon:'🧑‍🌾',title:'Verification submitted',text:`${b} is queued for demo verification.`,unread:true});persistNotifications();renderNotifications();toast('Farmer onboarding submitted')}
 function askAI(q){$('aiInput').value=q;sendAI()}
-async function sendAI(){const input=$('aiInput');const q=input.value.trim();if(!q)return;const body=$('chatBody');body.insertAdjacentHTML('beforeend',`<div class="bubble user">${safe(q)}</div>`);input.value='';body.insertAdjacentHTML('beforeend',`<div class="bubble ai" id="aiTyping">Thinking…</div>`);body.scrollTop=body.scrollHeight;let reply='';const endpoint=storage.get('ff_ai_endpoint',localStorage.getItem('ff_ai_endpoint'));if(endpoint){try{const r=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:q,context:{location:$('locationChip')?.textContent||'Coimbatore',products:products.slice(0,20).map(p=>({name:p.name,price:p.price,category:p.category}))}})});if(!r.ok)throw new Error('AI endpoint failed');const data=await r.json();reply=data.reply||data.message||data.output||''}catch(e){reply='';}}if(!reply)reply=aiReply(q);const typing=$('aiTyping');if(typing)typing.outerHTML=`<div class="bubble ai">${safe(reply)}</div>`;body.scrollTop=body.scrollHeight}
-function aiReply(q){const x=q.toLowerCase();if(x.includes('price')&&x.includes('tomato'))return 'Demo recommendation: your tomato listing is ₹32/kg while the market reference is ₹45/kg. A production AI can combine recent local demand, harvest volume, quality and competitor prices to suggest a selling range.';if(x.includes('weather'))return 'Demo advisory: connect a live weather API for farm-specific rainfall, heat, wind and irrigation alerts. The UI is ready for that API response.';if(x.includes('crop'))return 'Demo recommendation: crop selection should combine season, water availability, soil, local demand and expected price. A live model/API can return ranked crops.';if(x.includes('demand'))return 'Demo signal: tomato demand is up 8% in this prototype. A live demand model can use marketplace orders, search volume, seasonality and nearby inventory.';if(x.includes('cheapest')){const veg=products.filter(p=>p.category==='Vegetables').sort((a,b)=>a.price-b.price).slice(0,3);return 'Cheapest vegetables now: '+veg.map(p=>`${p.name} ₹${p.price}/${p.unit}`).join(', ')+'.';}if(x.includes('nearby')||x.includes('farmer')){const fs=[...products].sort((a,b)=>a.distance-b.distance).slice(0,3);return 'Nearby farmer listings: '+fs.map(p=>`${p.farmer} (${p.distance} km)`).join(', ')+'.';}return 'I can help with price recommendation, demand, crop planning, weather integration, inventory warnings, cheapest products and nearby farmers. For live AI, connect this UI to your backend model/API.'}
+async function sendAI(){
+  const input=$('aiInput');
+  const q=input.value.trim();
+  if(!q)return;
+  const body=$('chatBody');
+  const userBubble=document.createElement('div');
+  userBubble.className='bubble user';
+  userBubble.textContent=q;
+  body.appendChild(userBubble);
+  input.value='';
+  const typing=document.createElement('div');
+  typing.className='bubble ai';
+  typing.textContent='Checking available AgriNex data…';
+  body.appendChild(typing);
+  const reply=aiReply(q);
+  const answer=document.createElement('div');
+  answer.className='bubble ai';
+  answer.textContent=reply;
+  typing.replaceWith(answer);
+  body.scrollTop=body.scrollHeight;
+}
+function aiReply(q){
+  const x=q.toLowerCase();
+  if(x.includes('weather'))return 'Farm-specific weather data is not connected. No forecast is available in AgriNex yet.';
+  if(x.includes('crop'))return 'Crop planning requires verified soil, season, water and agronomy information. AgriNex does not currently provide a validated crop recommendation model.';
+  if(x.includes('price')||x.includes('tomato')||x.includes('mandi'))return 'No price should be guessed. Use the Farmer dashboard and open Verified market prices to view dated wholesale mandi observations after an administrator has synced the official daily source.';
+  if(x.includes('demand'))return 'Use My AgriNex demand in the Farmer dashboard for this seller account\'s recorded orders. It is not a city-wide demand forecast.';
+  if(x.includes('cheapest')||x.includes('listing')){
+    const available=products.filter(p=>p.stock>0).sort((a,b)=>a.price-b.price).slice(0,5);
+    return available.length
+      ? 'Current AgriNex catalogue prices: '+available.map(p=>p.name+' ₹'+p.price+'/'+p.unit).join(', ')+'. These are listed seller prices, not a market-wide cheapest-price survey.'
+      : 'No current product listings are available from the marketplace.';
+  }
+  if(x.includes('nearby')||x.includes('farmer'))return 'Live distance routing is not connected. Browse approved farmer listings and check the farm district shown on each product.';
+  return 'I can look up current AgriNex catalogue listings. Verified daily mandi observations and your own recorded demand are shown separately in the Farmer dashboard. An external AI model, live weather feed and city-wide demand source are not connected.';
+}
 function clearChat(){$('chatBody').innerHTML='<div class="bubble ai">Chat cleared. Ask a new farming or shopping question.</div>'}
 function safe(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
 function renderCategories(){const box=$('categoryGrid');if(!box)return;const defs=[['Vegetables','🥬'],['Fruits','🍎'],['Dairy','🥛'],['Grains','🌾'],['Liquids','🫗'],['Organic','🌱']];box.innerHTML=defs.map(([c,ico])=>{const n=products.filter(p=>p.stock>0&&(c==='Organic'?p.organic:p.category===c)).length;return `<button class="category-tile" onclick="setCategory('${c}')"><div class="big">${ico}</div><strong>${c}</strong><span>${n} live products</span></button>`}).join('')}
-function loginAdminDemo(){const c=$('loginContact').value.trim()||'admin@agrinex.demo';currentUser={name:'Admin',contact:c,role:'admin',signedInAt:new Date().toISOString()};storage.set('ff_user',currentUser);updateProfileUI();renderAccountActions();closeModals();toast('Admin demo account enabled. Use only for local testing.')}
+function loginAdminDemo(){closeModals();if(typeof window.openAdminConsole==='function'){window.openAdminConsole();return}toast('Administrator access requires a real verified account on the private allowlist.')}
 function logoutDemo(){currentUser=null;storage.set('ff_user',null);updateProfileUI(true);closeModals();toast('Signed out on this device.')}
 document.addEventListener('change',e=>{if(e.target&&e.target.id==='loginRole'){const w=document.getElementById('loginFarmNameWrap');if(w)w.style.display=e.target.value==='farmer'?'block':'none';}});
-function renderAccountActions(){const a=$('accountActions');if(!a)return;a.innerHTML=currentUser?`<div class="api-note"><b>Signed in as ${safe(currentUser.name)}</b>${currentUser.role==='admin'?' • Admin demo':''}</div><button class="btn btn-light" style="margin-top:8px;width:100%" onclick="logoutDemo()">Sign out / switch account</button>${currentUser.role==='admin'?'<button class="btn btn-soft" style="margin-top:8px;width:100%" onclick="closeModals();AdminManager.open()">Open Admin Console</button>':''}`:''}
+function renderAccountActions(){const a=$('accountActions');if(!a)return;a.innerHTML=currentUser?`<div class="api-note"><b>Signed in as ${safe(currentUser.name)}</b></div><button class="btn btn-light" style="margin-top:8px;width:100%" onclick="logoutDemo()">Sign out / switch account</button>`:''}
 // --- AgriNex innovation layer ---
 const InnovationStore={
   get(key,fallback){return storage.get('ff_'+key,fallback)},
