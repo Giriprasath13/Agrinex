@@ -1,5 +1,6 @@
 import os
 import re
+import json
 import base64
 import binascii
 import uuid
@@ -218,13 +219,10 @@ def _razorpay_settings() -> tuple[str, str, str]:
     if mode == "test" and not key_id.startswith("rzp_test_"):
         raise HTTPException(status_code=503, detail="Test mode requires a Razorpay test key.")
     if mode == "live":
-        if not os.getenv("AGRI_LIVE_COMMERCE_APPROVED", "").strip().lower() == "true":
-            raise HTTPException(
-                status_code=403,
-                detail="Live payments require an adult-operated, legally registered merchant account and a reviewed launch approval.",
-            )
-        if not key_id.startswith("rzp_live_"):
-            raise HTTPException(status_code=503, detail="Live mode requires a Razorpay live key.")
+        raise HTTPException(
+            status_code=403,
+            detail="Live payments are disabled in this student pilot. Only test-mode gateway integration is supported; any future live merchant operation must be owned and supervised by an adult-operated legal entity.",
+        )
     _service_role_key()
     return key_id, key_secret, webhook_secret
 
@@ -322,7 +320,7 @@ def _whatsapp_settings() -> tuple[str, str, str, str]:
     template = os.getenv("WHATSAPP_ORDER_TEMPLATE_NAME", "").strip()
     if not (token and phone_id and version and template):
         raise HTTPException(status_code=503, detail="WhatsApp Business messaging is not configured.")
-    if not re.fullmatch(r"v\\d+\\.0", version):
+    if not re.fullmatch(r"v\d+\.0", version):
         raise HTTPException(status_code=503, detail="Set a valid WhatsApp Graph API version.")
     return token, phone_id, version, template
 
@@ -334,7 +332,7 @@ async def _send_whatsapp_order_update(
         targets = await supabase_request(
             "POST",
             "/rest/v1/rpc/get_agrinex_whatsapp_targets",
-            access_token=access_token,
+            access_token=_service_role_key(),
             payload={"p_order_id": order_id},
         )
     except HTTPException as exc:
@@ -348,7 +346,7 @@ async def _send_whatsapp_order_update(
     accepted = 0
     failed = 0
     for target in targets:
-        phone = re.sub(r"\\D", "", str(target.get("phone") or ""))
+        phone = re.sub(r"\D", "", str(target.get("phone") or ""))
         if not phone:
             failed += 1
             continue
@@ -622,6 +620,7 @@ class AddressCreateRequest(BaseModel):
     label: str = Field(default="Home", max_length=40)
     recipient_name: str | None = Field(default=None, max_length=80)
     mobile: str | None = Field(default=None, max_length=20)
+    email: str | None = Field(default=None, max_length=254, pattern=r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
     line1: str = Field(min_length=5, max_length=250)
     city: str = Field(min_length=2, max_length=80)
     state: str = Field(min_length=2, max_length=80)
@@ -1127,6 +1126,7 @@ async def create_customer_order(body: OrderCreateRequest, authorization: str | N
             "label": address.get("label"),
             "recipient_name": address.get("recipient_name"),
             "mobile": address.get("mobile"),
+            "email": address.get("email"),
             "line1": address["line1"],
             "city": address["city"],
             "state": address["state"],
@@ -1514,12 +1514,11 @@ async def razorpay_webhook(request: Request):
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid webhook JSON.")
     event_type = payload.get("event")
-    if event_type not in {"payment.captured", "order.paid"}:
-        return {"received": True, "processed": False, "reason": "Event is not a captured payment."}
-    entity = (
-        payload.get("payload", {}).get("payment", {}).get("entity", {})
-        or payload.get("payload", {}).get("order", {}).get("entity", {})
-    )
+    if event_type not in {"payment.captured", "order.paid", "payment.failed"}:
+        return {"received": True, "processed": False, "reason": "Event is not a supported payment state."}
+    payment_entity = payload.get("payload", {}).get("payment", {}).get("entity", {}) or {}
+    order_entity = payload.get("payload", {}).get("order", {}).get("entity", {}) or {}
+    entity = payment_entity or order_entity
     payment_id = entity.get("id") if entity.get("entity") == "payment" else (
         payload.get("payload", {}).get("payment", {}).get("entity", {}).get("id")
     )
@@ -1539,6 +1538,23 @@ async def razorpay_webhook(request: Request):
     order = _first_row(rows)
     if not order or order.get("payment_method") != "razorpay":
         raise HTTPException(status_code=404, detail="Matching AgriNex payment order not found.")
+    if event_type == "payment.failed":
+        service_key = _service_role_key()
+        result = await supabase_request(
+            "POST", "/rest/v1/rpc/record_agrinex_razorpay_failure",
+            access_token=service_key,
+            payload={
+                "p_order_id": order["id"],
+                "p_provider_order_id": provider_order_id,
+                "p_payment_id": payment_id,
+                "p_event_id": event_id,
+                "p_failure_reason": str(payment_entity.get("error_description") or "")[:300],
+            },
+        )
+        # Do not release reserved stock on payment.failed: a later captured event
+        # may arrive for the same attempt. Reconcile capture before cancellation.
+        return {"received": True, "processed": True, "result": result}
+
     await _verify_gateway_payment_matches_order(
         payment_id, provider_order_id, _amount_paise(order["total"])
     )
@@ -1578,6 +1594,11 @@ async def book_order_shipment(
     order_id = _uuid_or_422(order_id, "order ID")
     if not _shiprocket_is_configured():
         raise HTTPException(status_code=503, detail="Shiprocket API user credentials are not configured.")
+    if os.getenv("AGRI_LIVE_LOGISTICS_APPROVED", "").strip().lower() != "true":
+        raise HTTPException(
+            status_code=403,
+            detail="Live carrier booking is disabled for this student pilot. A legally responsible adult-operated business must approve and own any real shipment bookings.",
+        )
     pickup_name = (farmer.get("shiprocket_pickup_location") or os.getenv("SHIPROCKET_PICKUP_LOCATION", "")).strip()
     if not pickup_name or not farmer.get("farm_pincode"):
         raise HTTPException(status_code=422, detail="A registered Shiprocket pickup location and farm pincode are required.")
@@ -1597,7 +1618,7 @@ async def book_order_shipment(
     if order["payment_method"] == "razorpay" and order["payment_status"] != "captured":
         raise HTTPException(status_code=409, detail="Prepaid orders cannot ship before payment is captured.")
     address = order.get("delivery_address") or {}
-    for key in ("recipient_name", "mobile", "line1", "city", "state", "pincode"):
+    for key in ("recipient_name", "mobile", "email", "line1", "city", "state", "pincode"):
         if not str(address.get(key) or "").strip():
             raise HTTPException(status_code=422, detail=f"Delivery address is missing {key}.")
     shiprocket = await _shiprocket_token()
@@ -1655,7 +1676,7 @@ async def book_order_shipment(
             "billing_pincode": address["pincode"],
             "billing_state": address["state"],
             "billing_country": "India",
-            "billing_email": "orders@agrinex.invalid",
+            "billing_email": str(address["email"]).strip(),
             "billing_phone": re.sub(r"\\D", "", str(address["mobile"])),
             "shipping_is_billing": True,
             "order_items": order_items,
@@ -1728,6 +1749,8 @@ async def update_whatsapp_preferences(body: WhatsAppPreferencesRequest, authoriz
         "whatsapp_language": body.language,
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
+    if not body.opted_in:
+        values["whatsapp_phone"] = None
     if body.opted_in:
         if not body.phone:
             raise HTTPException(status_code=422, detail="Enter a WhatsApp number before opting in.")
@@ -1873,9 +1896,7 @@ async def marketplace_health():
     ))
     razorpay_mode = os.getenv("RAZORPAY_MODE", "test").strip().lower()
     live_approved = os.getenv("AGRI_LIVE_COMMERCE_APPROVED", "").strip().lower() == "true"
-    razorpay_ready = razorpay_ready and (
-        razorpay_mode == "test" or (razorpay_mode == "live" and live_approved)
-    )
+    razorpay_ready = razorpay_ready and razorpay_mode == "test"
     whatsapp_ready = all(os.getenv(k, "").strip() for k in (
         "WHATSAPP_ACCESS_TOKEN", "WHATSAPP_PHONE_NUMBER_ID",
         "WHATSAPP_GRAPH_API_VERSION", "WHATSAPP_ORDER_TEMPLATE_NAME"
