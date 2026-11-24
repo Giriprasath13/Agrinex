@@ -21,11 +21,16 @@ Open the AgriNex project: https://supabase.com/dashboard/project/ybfhsgofurowfux
 3. Enable phone confirmation so signup does not immediately create an authenticated session before OTP verification.
 4. Configure a supported SMS provider and enter its credentials in the Supabase dashboard. Save the settings.
 5. Check the SMS provider's sender ID, destination-country permissions, and account balance/limits. SMS delivery can incur charges.
-6. Keep OTP expiry and rate limits enabled. Do not disable abuse protections for testing.
+6. Keep OTP expiry and rate limits enabled. Configure CAPTCHA and sensible send limits before public testing.
+7. For Indian routes, check applicable TRAI/DLT sender, template and operator requirements with the responsible provider/operator before enabling outbound SMS.
+8. Use only phone numbers controlled by consenting testers. A fixed test OTP in Supabase Auth is acceptable for local test accounts; it does not test real SMS delivery.
+9. Set `SUPABASE_PHONE_SMS_CONFIGURED=true` in Vercel only after a real end-to-end test succeeds. This flag is a readiness indicator, not an SMS switch.
 
 Supabase documentation:
 - https://supabase.com/docs/guides/auth/phone-login
 - https://supabase.com/docs/guides/auth/passwords
+- https://supabase.com/docs/guides/auth/production-checklist
+- Provider-specific setup and release gates: [docs/PROVIDER_SETUP.md](PROVIDER_SETUP.md)
 
 ## Vercel environment variables
 
@@ -34,6 +39,8 @@ The Vercel project `agrinex` already has these variables configured for Preview 
 - `SUPABASE_URL`
 - `SUPABASE_PUBLISHABLE_KEY`
 - `PHONE_COUNTRY_CODE=+91`
+
+Server-only integrations may also need `SUPABASE_SERVICE_ROLE_KEY`; it must never be exposed in frontend code or sent through chat.
 
 Do not add SMS-provider credentials to Vercel for the native Supabase SMS provider. Configure those in Supabase Auth settings.
 
