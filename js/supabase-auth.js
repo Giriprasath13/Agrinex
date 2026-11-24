@@ -67,7 +67,7 @@
       farmName: profile.farm_name || '',
       signedInAt: new Date().toISOString()
     };
-    write('ff_user', window.currentUser);
+    write('ff_user', currentUser);
     if (typeof updateProfileUI === 'function') updateProfileUI();
     if (typeof renderAccountActions === 'function') renderAccountActions();
     const pending = profile.requested_role === 'farmer' && profile.role !== 'farmer';
@@ -80,6 +80,7 @@
     saveSession(session);
     const profile = await getProfile(session.user.id, session.access_token);
     applySignedInUser(profile);
+    if (profile.role === 'farmer') await loadFarmerProducts();
     if (el('loginModal')) closeModals();
     if (profile.role === 'farmer' && profile.farmer_status === 'approved') {
       showPage('farmer');
@@ -166,7 +167,12 @@
 
   async function restoreSession() {
     const refresh = read(REFRESH_KEY);
-    if (!refresh) return;
+    if (!refresh) {
+      [ACCESS_KEY, 'ff_access_token', 'ff_user', PROFILE_KEY].forEach(clear);
+      currentUser = null;
+      if (typeof updateProfileUI === 'function') updateProfileUI(true);
+      return;
+    }
     try {
       const session = await request('/auth/v1/token?grant_type=refresh_token', {
         method: 'POST',
