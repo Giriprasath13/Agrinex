@@ -681,7 +681,13 @@ async def get_cart(authorization: str | None = Header(default=None)):
     result = []
     for row in rows or []:
         p = row.get("product") or {}
-        if not p:
+        if not p or p.get("status") != "active":
+            # Archived/unavailable listings cannot remain purchasable in a cart.
+            await supabase_request(
+                "DELETE", "/rest/v1/agrinex_cart_items",
+                access_token=token,
+                params={"id": f"eq.{row['id']}", "user_id": f"eq.{profile['id']}"},
+            )
             continue
         p["product_id"] = row["product_id"]
         p["quantity"] = row["quantity"]
