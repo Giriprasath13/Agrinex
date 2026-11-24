@@ -1509,6 +1509,12 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
   async function syncOrders(){if(!token())return; const rows=await api('/api/orders'); orders=rows.map(mapOrder); if(!orders.length)orders=[]; persist(); renderOrders(); renderTracking();}
   async function syncNotifications(){if(!token())return; const rows=await api('/api/notifications'); notifications=rows.map(n=>({id:n.id,icon:n.type==='payment'?'💳':n.type==='order'?'📦':'🔔',title:n.title,text:n.message,unread:!n.read})); persistNotifications(); renderNotifications();}
   async function bootBackend(){
+    if(storage.get('ff_demo_mode',false)){
+      backendReady=false;
+      backendStatus();
+      syncing=false;
+      return;
+    }
     if(syncing)return; syncing=true;
     try{
       await api('/health'); backendReady=true; backendStatus();
@@ -1566,6 +1572,7 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
   window.logoutDemo=function(){storage.remove('ff_access_token');currentUser=null;storage.remove('ff_user');updateProfileUI(true);cart=[];orders=[];closeModals();toast('Signed out');};
   // Realtime order/stock updates.
   async function connectSocket(){
+    if(storage.get('ff_demo_mode',false))return;
     if(!token())return; const u=new URL(apiBase());u.protocol=u.protocol==='https:'?'wss:':'ws:';u.pathname='/ws/events';u.search='?token='+encodeURIComponent(token());
     try{const ws=new WebSocket(u.toString());ws.onmessage=async(ev)=>{try{const msg=JSON.parse(ev.data);if(['inventory.updated','order.status','payment.verified','order.created','farmer.order.created'].includes(msg.type)){await Promise.allSettled([syncProducts(),syncCart(),syncOrders(),syncNotifications()]);toast('Live update received');}}catch(_){}};ws.onclose=()=>setTimeout(connectSocket,5000);}catch(_){}}
 
@@ -3534,6 +3541,349 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
     };
   }
 
+})();
+</script>
+
+
+<!-- Frontend-only demo authentication. No API, Supabase or SMS calls are made by this module. -->
+<style id="ff-demo-auth-styles">
+  .ff-demo-banner{margin:13px 0;padding:12px 14px;border:1px solid #f3d89b;border-radius:12px;background:#fff9e9;color:#75500e;font-size:11px;line-height:1.55}
+  .ff-demo-code{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:10px 0 12px;padding:13px 15px;border:1px dashed #c58a20;border-radius:12px;background:#fffaf0;color:#49340b}
+  .ff-demo-code strong{font-size:23px;letter-spacing:5px;font-variant-numeric:tabular-nums}
+  .ff-demo-code small{display:block;font-size:9px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:#8a651c}
+  .ff-demo-tag{display:inline-block;margin-left:6px;padding:3px 7px;border-radius:999px;background:#fff0c8;color:#76500d;font-size:9px;font-weight:900;vertical-align:middle}
+</style>
+<script id="ff-demo-auth">
+(function(){
+  'use strict';
+
+  const ACCOUNTS_KEY = 'ff_demo_accounts';
+  const DEMO_MODE_KEY = 'ff_demo_mode';
+  const pending = { customer:null, farmer:null };
+  const $ = (id) => document.getElementById(id);
+
+  function accounts(){
+    const rows = storage.get(ACCOUNTS_KEY, []);
+    return Array.isArray(rows) ? rows : [];
+  }
+  function saveAccounts(rows){ storage.set(ACCOUNTS_KEY, rows); }
+  function setStatus(role, mode, message, ok){
+    const node = $(role + (mode === 'register' ? 'Register' : 'Login') + 'Status');
+    if(node){ node.textContent = message || ''; node.classList.toggle('ok', !!ok); }
+  }
+  function setOtpStatus(role, message, ok){
+    const node = $(role + 'OtpStatus');
+    if(node){ node.textContent = message || ''; node.classList.toggle('ok', !!ok); }
+  }
+  function randomOtp(){
+    const values = new Uint32Array(1);
+    crypto.getRandomValues(values);
+    return String(100000 + (values[0] % 900000));
+  }
+  function randomSalt(){
+    const values = new Uint8Array(16);
+    crypto.getRandomValues(values);
+    return Array.from(values, x => x.toString(16).padStart(2,'0')).join('');
+  }
+  async function passwordDigest(password, salt){
+    if(!window.crypto?.subtle) throw new Error('Demo sign-in needs a secure browser context (HTTPS or localhost).');
+    const bytes = new TextEncoder().encode(salt + ':' + password);
+    const digest = await crypto.subtle.digest('SHA-256', bytes);
+    return Array.from(new Uint8Array(digest), x => x.toString(16).padStart(2,'0')).join('');
+  }
+  function phoneDigits(value){ return String(value || '').replace(/\\D/g,''); }
+  function setBusy(role, mode, busy){
+    const prefix = role === 'customer' ? 'customer' : 'farmer';
+    const form = $(prefix + (mode === 'register' ? 'Register' : 'Login') + 'Form');
+    const button = form?.querySelector(':scope > .auth-submit');
+    if(button) button.disabled = !!busy;
+  }
+  function displayOtp(role, code){
+    const prefix = role === 'customer' ? 'customer' : 'farmer';
+    const panel = $(prefix + 'RegisterOtp');
+    if(!panel) return;
+    const intro = panel.querySelector('p');
+    if(intro) intro.textContent = 'DEMO MODE: No SMS is sent. Enter the demo code displayed below.';
+    let codeBox = $('ffDemoOtp_' + role);
+    if(!codeBox){
+      codeBox = document.createElement('div');
+      codeBox.id = 'ffDemoOtp_' + role;
+      codeBox.className = 'ff-demo-code';
+      const label = document.createElement('div');
+      const small = document.createElement('small');
+      small.textContent = 'Your demo verification code';
+      const value = document.createElement('strong');
+      value.className = 'ff-demo-otp-value';
+      label.append(small, value);
+      const badge = document.createElement('span');
+      badge.className = 'ff-demo-tag';
+      badge.textContent = 'ON SCREEN';
+      codeBox.append(label, badge);
+      const actions = panel.querySelector('.auth-otp-actions');
+      panel.insertBefore(codeBox, actions || null);
+    }
+    const value = codeBox.querySelector('.ff-demo-otp-value');
+    if(value) value.textContent = code;
+    const input = $(prefix + 'RegisterOtpCode');
+    if(input){ input.value = ''; input.placeholder = 'Enter the demo code shown above'; }
+  }
+  function showSignupOtp(role, mode){
+    const prefix = role === 'customer' ? 'customer' : 'farmer';
+    const form = $(prefix + 'RegisterForm');
+    const panel = $(prefix + 'RegisterOtp');
+    if(!form || !panel) return;
+    form.querySelectorAll(':scope > .auth-field').forEach(node => { node.hidden = mode === 'otp'; });
+    const submit = form.querySelector(':scope > .auth-submit');
+    if(submit) submit.hidden = mode === 'otp';
+    panel.hidden = mode !== 'otp';
+  }
+  function demoSession(account){
+    storage.set(DEMO_MODE_KEY, true);
+    const session = 'DEMO-LOCAL-ONLY-' + account.id;
+    storage.set('ff_access_token', session);
+    currentUser = {
+      id: account.id,
+      name: account.name,
+      contact: account.phone,
+      role: account.role,
+      farmName: account.farmName || '',
+      farmerStatus: account.role === 'farmer' ? 'approved' : 'not_applicable',
+      preferredLanguage: 'en',
+      demoMode: true,
+      signedInAt: new Date().toISOString()
+    };
+    storage.set('ff_user', currentUser);
+    if(typeof loadState === 'function') loadState();
+    if(typeof updateProfileUI === 'function') updateProfileUI();
+    if(typeof renderAccountActions === 'function') renderAccountActions();
+  }
+  function finishDemoSignIn(account, source){
+    demoSession(account);
+    if(typeof window.closeAuthPortal === 'function') window.closeAuthPortal();
+    if(account.role === 'farmer'){
+      window.showPage('farmer');
+      toast(source === 'register'
+        ? 'Demo farmer account created. Selling tools are available in this browser only.'
+        : 'Demo farmer sign-in successful.');
+    } else {
+      window.showPage('home');
+      toast(source === 'register'
+        ? 'Demo customer account created. Your account is saved in this browser only.'
+        : 'Demo customer sign-in successful.');
+    }
+  }
+
+  window.setAuthMode = function(role, mode){
+    if(!['customer','farmer'].includes(role) || !['login','register'].includes(mode)) return;
+    const prefix = role === 'customer' ? 'customer' : 'farmer';
+    $(prefix + 'LoginForm').hidden = mode !== 'login';
+    $(prefix + 'RegisterForm').hidden = mode !== 'register';
+    $(prefix + 'LoginTab').classList.toggle('active', mode === 'login');
+    $(prefix + 'RegisterTab').classList.toggle('active', mode === 'register');
+    showSignupOtp(role, pending[role] ? 'otp' : 'form');
+    setStatus(role,'login','',false);
+    setStatus(role,'register','',false);
+    setOtpStatus(role,'',false);
+  };
+
+  window.authRegister = async function(event, role){
+    event?.preventDefault();
+    if(!['customer','farmer'].includes(role)) return false;
+    const prefix = role === 'customer' ? 'customer' : 'farmer';
+    const name = ($(prefix + 'RegisterName')?.value || '').trim();
+    const phone = phoneDigits($(prefix + 'RegisterPhone')?.value);
+    const password = $(prefix + 'RegisterPassword')?.value || '';
+    const farmName = role === 'farmer' ? ( $('farmerRegisterFarm')?.value || '').trim() : '';
+    setStatus(role,'register','',false);
+    setOtpStatus(role,'',false);
+
+    if(name.length < 2){ setStatus(role,'register','Enter your full name.',false); return false; }
+    if(!/^[0-9]{10}$/.test(phone)){ setStatus(role,'register','Enter a valid 10-digit mobile number.',false); return false; }
+    if(password.length < 8){ setStatus(role,'register','Choose a password with at least 8 characters.',false); return false; }
+    if(role === 'farmer' && !farmName){ setStatus(role,'register','Enter your farm name.',false); return false; }
+    if(!window.crypto?.subtle){ setStatus(role,'register','Open AgriNex over HTTPS or localhost to use demo sign-in.',false); return false; }
+
+    const existing = accounts().find(item => item.phone === phone);
+    if(existing){
+      setStatus(role,'register','This mobile number already has a demo account. Select Sign in instead.',false);
+      return false;
+    }
+
+    const otp = randomOtp();
+    pending[role] = { role, name, phone, password, farmName, otp };
+    showSignupOtp(role,'otp');
+    displayOtp(role,otp);
+    setOtpStatus(role,'Demo verification code generated on this page. No SMS was sent.',true);
+    $(prefix + 'RegisterOtpCode')?.focus();
+    return false;
+  };
+
+  window.authVerify = async function(event, role){
+    event?.preventDefault();
+    const item = pending[role];
+    if(!item){ setOtpStatus(role,'Start account creation first.',false); return false; }
+    const prefix = role === 'customer' ? 'customer' : 'farmer';
+    const entered = ($(prefix + 'RegisterOtpCode')?.value || '').trim();
+    if(entered !== item.otp){
+      setOtpStatus(role,'That demo code does not match. Check the code displayed above.',false);
+      return false;
+    }
+    const salt = randomSalt();
+    const digest = await passwordDigest(item.password,salt);
+    const account = {
+      id: crypto.randomUUID(),
+      name: item.name,
+      phone: item.phone,
+      role: item.role,
+      farmName: item.farmName || '',
+      passwordSalt: salt,
+      passwordDigest: digest,
+      createdAt: new Date().toISOString()
+    };
+    const rows = accounts();
+    rows.push(account);
+    saveAccounts(rows);
+    pending[role] = null;
+    $(prefix + 'RegisterForm')?.reset();
+    showSignupOtp(role,'form');
+    setStatus(role,'register','',false);
+    setOtpStatus(role,'',false);
+    finishDemoSignIn(account,'register');
+    return false;
+  };
+
+  window.authResend = function(role){
+    const item = pending[role];
+    if(!item){ setOtpStatus(role,'Start account creation first.',false); return; }
+    item.otp = randomOtp();
+    displayOtp(role,item.otp);
+    setOtpStatus(role,'New demo code generated. No SMS was sent.',true);
+  };
+
+  window.authLogin = async function(event, role){
+    event?.preventDefault();
+    if(!['customer','farmer'].includes(role)) return false;
+    const prefix = role === 'customer' ? 'customer' : 'farmer';
+    const phone = phoneDigits($(prefix + 'LoginPhone')?.value);
+    const password = $(prefix + 'LoginPassword')?.value || '';
+    setStatus(role,'login','',false);
+    if(!/^[0-9]{10}$/.test(phone)){ setStatus(role,'login','Enter a valid 10-digit mobile number.',false); return false; }
+    if(password.length < 8){ setStatus(role,'login','Enter your password (at least 8 characters).',false); return false; }
+    setBusy(role,'login',true);
+    try{
+      const account = accounts().find(item => item.phone === phone && item.role === role);
+      if(!account){
+        const anotherRole = accounts().find(item => item.phone === phone);
+        throw new Error(anotherRole
+          ? 'This mobile number belongs to a ' + anotherRole.role + ' demo account. Choose the matching account type.'
+          : 'No demo account found for this number. Select Create account first.');
+      }
+      const digest = await passwordDigest(password,account.passwordSalt);
+      if(digest !== account.passwordDigest) throw new Error('Incorrect mobile number or password.');
+      finishDemoSignIn(account,'login');
+    }catch(error){
+      setStatus(role,'login',error.message || 'Unable to sign in.',false);
+    }finally{
+      setBusy(role,'login',false);
+    }
+    return false;
+  };
+
+  window.logoutDemo = function(){
+    storage.remove('ff_access_token');
+    storage.remove(DEMO_MODE_KEY);
+    currentUser = null;
+    storage.set('ff_user',null);
+    if(typeof loadState === 'function') loadState();
+    if(typeof updateProfileUI === 'function') updateProfileUI(true);
+    if(typeof closeModals === 'function') closeModals();
+    toast('Signed out of the local demo account.');
+  };
+  window.authSignOutAndSwitch = function(){
+    window.logoutDemo();
+    window.openAuthPortal('choose');
+  };
+
+  // In demo mode, farmer tools and product listings stay local and never call the API.
+  window.loadFarmerDashboard = async function(){
+    if(!currentUser || currentUser.role !== 'farmer') return;
+    currentUser.farmerStatus = 'approved';
+    currentUser.farmName = currentUser.farmName || 'Demo Farm';
+    storage.set('ff_user',currentUser);
+    if(typeof renderFarmerStatus === 'function') renderFarmerStatus();
+    if(typeof renderFarmer === 'function') renderFarmer();
+    if(typeof renderInventory === 'function') renderInventory();
+  };
+  window.loadFarmerInventory = async function(){
+    if(!currentUser || currentUser.role !== 'farmer') return [];
+    if(typeof renderInventory === 'function') renderInventory();
+    return products.filter(p => p.farmerId === 'farmer-' + currentUser.contact);
+  };
+  window.addProduct = async function(){
+    if(!currentUser || currentUser.role !== 'farmer'){
+      toast('Sign in with a farmer demo account to add products.');
+      return;
+    }
+    const name = ($('newName')?.value || '').trim();
+    const price = Number($('newPrice')?.value);
+    const market = Number($('newMarket')?.value) || price;
+    const stock = Math.max(0, Number($('newStock')?.value) || 0);
+    const unit = $('newUnit')?.value || 'kg';
+    const image = ($('newImage')?.value || '').trim();
+    const category = $('newCategory')?.value || 'Vegetables';
+    if(!name || !(price > 0)){
+      toast('Enter a product name and a valid selling price.');
+      return;
+    }
+    const product = {
+      id: makeId('P'),
+      name, category, price, market, stock, unit, image,
+      description:'',
+      farmer: currentUser.farmName || currentUser.name,
+      farmerId:'farmer-' + currentUser.contact,
+      emoji:'🌱', rating:5, distance:1.2,
+      organic:category === 'Organic',
+      fresh:'Today', verified:false, harvest:0,
+      delivery:'Demo pickup', hours:1,
+      location:'', demoOnly:true
+    };
+    products.unshift(product);
+    closeModals();
+    if(typeof persist === 'function') persist();
+    if(typeof renderInventory === 'function') renderInventory();
+    if(typeof renderFarmer === 'function') renderFarmer();
+    if(typeof renderHome === 'function') renderHome();
+    if(typeof renderMarketplace === 'function') renderMarketplace();
+    toast(name + ' added to this browser’s demo inventory. It is not published online.');
+  };
+
+  // Restore an existing local demo session without contacting the API.
+  if(storage.get(DEMO_MODE_KEY,false)){
+    const saved = storage.get('ff_user',null);
+    if(saved && saved.demoMode){
+      currentUser = saved;
+      storage.set('ff_access_token','DEMO-LOCAL-ONLY-' + saved.id);
+      if(typeof updateProfileUI === 'function') updateProfileUI();
+    }else{
+      storage.remove(DEMO_MODE_KEY);
+      storage.remove('ff_access_token');
+    }
+  }
+
+  // Replace misleading server/SMS instructions with explicit demo-mode notices.
+  document.querySelectorAll('.auth-form-note').forEach(node => {
+    node.textContent = 'FRONTEND DEMO: No real SMS is sent. Demo OTP appears on this page. Accounts are saved only in this browser; do not use a real password.';
+  });
+  const productNote = document.querySelector('#productModal .small');
+  if(productNote) productNote.textContent = 'Frontend demo only. Products added here are saved in this browser and are not shared with other users.';
+  const farmerNote = document.querySelector('#farmerAuthPage .auth-form-note');
+  if(farmerNote) farmerNote.textContent = 'Demo farmer access is enabled locally so you can test the dashboard and inventory. No real farmer verification is performed.';
+
+  window.ffDemoAuth = {
+    enabled:true,
+    accounts:() => accounts().map(({passwordSalt,passwordDigest,...safe}) => safe),
+    clearAccounts:() => { saveAccounts([]); window.logoutDemo(); }
+  };
 })();
 </script>
 
