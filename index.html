@@ -3211,6 +3211,29 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
     }catch(e){if(host)host.textContent=e.message||'Could not check settlement readiness.';}
   };
 
+  window.syncDailyMandiPrices=async function(){
+    if(!token()){window.openAuthPortal?.('choose');return;}
+    const state=$('marketSyncState')?.value.trim()||'';
+    const district=$('marketSyncDistrict')?.value.trim()||'';
+    const commodity=$('marketSyncCommodity')?.value.trim()||'';
+    const limit=Math.max(1,Math.min(500,Number($('marketSyncLimit')?.value)||100));
+    const status=$('marketPriceImportStatus');
+    if(!state){if(status)status.textContent='Enter the state to limit the source query.';return;}
+    if(status)status.textContent='Fetching dated daily observations from data.gov.in and checking administrator permission…';
+    try{
+      const query='?state='+encodeURIComponent(state)
+        +(district?'&district='+encodeURIComponent(district):'')
+        +(commodity?'&commodity='+encodeURIComponent(commodity):'')
+        +'&limit='+limit;
+      const result=await api()('/api/admin/market-prices/sync'+query);
+      if(status)status.textContent='Fetched '+result.fetched+' row(s), imported '+result.imported+' row(s). Source: data.gov.in. '+result.message;
+      toast(result.imported+' daily mandi observation(s) imported.');
+      if(isFarmer()&&$('farmerInsightCommodity')?.value.trim())await window.loadFarmerEvidence();
+    }catch(e){
+      if(status)status.textContent=e.message||'Daily price sync could not be completed. Check the API key and administrator access.';
+    }
+  };
+
   window.importVerifiedMarketPrices=async function(){
     if(!token()){window.openAuthPortal?.('choose');return;}
     const status=$('marketPriceImportStatus');
