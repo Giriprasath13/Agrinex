@@ -2506,7 +2506,8 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
     const box=$('farmerOrdersTable');if(!box)return;
     const rows=window.ffFarmerOrders||[];
     if(!rows.length){
-      box.innerHTML='<tr><td colspan="6" class="small">No buyer orders yet. New customer and bulk-order requests will appear here when received.</td></tr>';return;
+      box.innerHTML='<tr><td colspan="6" class="small">No buyer orders yet. New customer and bulk-order requests will appear here when received.</td></tr>';
+      return;
     }
     const next={
       pending_acceptance:['confirmed','Accept'],
@@ -2519,10 +2520,25 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
     box.innerHTML=rows.map(o=>{
       const step=next[o.rawStatus];
       const customer=o.address?.recipient_name||'Customer';
-      const action=step?'<button class="btn btn-primary" style="padding:6px 8px;font-size:8px" onclick="advanceFarmerOrder(\''+esc(o.serverId)+'\',\''+step[0]+'\')">'+esc(step[1])+'</button>':'<span class="small">'+esc(o.rawStatus||o.status)+'</span>';
-      return '<tr><td>'+esc(o.id)+'</td><td>'+esc(customer)+'</td><td>'+esc(o.items||'Produce')+'</td><td>'+money(o.total)+'</td><td><span class="status '+(o.rawStatus==='delivered'?'ok':'warn')+'">'+esc(o.status)+'</span></td><td>'+action+'</td></tr>';
+      const action=step
+        ? '<button class="btn btn-primary" style="padding:6px 8px;font-size:8px" data-order-action="'+esc(o.serverId)+'" data-next-status="'+step[0]+'">'+esc(step[1])+'</button>'
+        : '<span class="small">'+esc(o.rawStatus||o.status)+'</span>';
+      const shipment=window.ffPaymentConfiguration?.shiprocket
+        ? '<button class="btn btn-light" style="padding:6px 8px;font-size:8px" data-shipment-order="'+esc(o.serverId)+'">Book shipment</button>'
+        : '';
+      return '<tr><td>'+esc(o.id)+'</td><td>'+esc(customer)+'</td><td>'+esc(o.items||'Produce')+'</td><td>'+money(o.total)+'</td><td><span class="status '+(o.rawStatus==='delivered'?'ok':'warn')+'">'+esc(o.status)+'</span></td><td>'+action+' '+shipment+'</td></tr>';
     }).join('');
+    box.onclick=function(event){
+      const button=event.target.closest('[data-order-action],[data-shipment-order]');
+      if(!button)return;
+      if(button.dataset.orderAction){
+        window.advanceFarmerOrder(button.dataset.orderAction,button.dataset.nextStatus);
+      }else if(button.dataset.shipmentOrder){
+        window.bookFarmerShipment(button.dataset.shipmentOrder);
+      }
+    };
   };
+
 
   window.advanceFarmerOrder=async function(orderId,nextStatus){
     if(!isFarmer())return;
