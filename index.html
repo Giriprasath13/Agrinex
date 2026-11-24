@@ -3411,6 +3411,7 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
         const trailing=original.match(/\\s*$/)?.[0]||'';
         const desired=leading+translated+trailing;
         if(node.nodeValue!==desired)node.nodeValue=desired;
+      }
       document.querySelectorAll('[placeholder],[aria-label],[title]').forEach(el=>{
         let saved=originalAttributes.get(el);
         if(!saved){saved={};originalAttributes.set(el,saved);}
