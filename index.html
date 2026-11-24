@@ -671,7 +671,7 @@
       <div class="drawer-section">More</div>
       <button class="menu-link" data-menu-page="notifications" onclick="menuGo('notifications')"><span class="mi">🔔</span>Notifications <span style="margin-left:auto" id="drawerNoteCount">3</span></button>
       <button class="menu-link" data-menu-page="resources" onclick="menuGo('resources')"><span class="mi">📚</span>Grow Smarter</button>
-      <button class="menu-link" onclick="toggleMobileMenu();openModal('loginModal')"><span class="mi">👤</span>Login / Sign up</button>
+      <button class="menu-link" onclick="toggleMobileMenu();openAuthPortal('choose')"><span class="mi">👤</span>Login / Sign up</button>
     </aside>
   </div>
 
@@ -1404,36 +1404,19 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
   window.ffBackend={boot:bootBackend,isReady:()=>backendReady,syncProducts,syncCart,syncOrders,syncNotifications,syncAddresses};
 
   // Backend login replaces browser-only demo login.
-  window.loginDemo=async function(){
-    const phone=$('loginContact')?.value.trim(); const password=$('loginPassword')?.value||'';
-    if(!/^[0-9]{10}$/.test(phone)){toast('Enter a valid 10-digit mobile number');return}
-    if(password.length<8){toast('Password must be at least 8 characters');return}
-    try{const d=await api('/api/auth/login',{method:'POST',body:JSON.stringify({phone,password})});storage.set('ff_access_token',d.access_token);currentUser={id:d.user.id,name:d.user.name,contact:d.user.phone,role:d.user.role,farmerStatus:d.user.farmer_status||'not_applicable',preferredLanguage:d.user.preferred_language||'en',farmName:d.user.farm_name||'',signedInAt:new Date().toISOString()};storage.set('ff_user',currentUser);closeModals();updateProfileUI();renderAccountActions();backendReady=true;await Promise.allSettled([syncProducts(),syncCart(),syncAddresses(),syncOrders(),syncNotifications()]);toast('Login successful');}
-    catch(e){toast(e.message||'Login failed. You can still use demo mode.');}
+  window.loginDemo=function(){
+    const role=$('loginRole')?.value||'choose';
+    closeModals();
+    window.openAuthPortal?.(role==='farmer'?'farmer':role==='customer'?'customer':'choose');
+    toast('Use the separate AgriNex sign-in screen to continue.');
   };
-  window.registerBackendUser=async function(){
-    const phone=$('loginContact')?.value.trim(); const password=$('loginPassword')?.value||''; const role=$('loginRole')?.value||'customer'; const farmName=$('loginFarmName')?.value.trim();
-    if(!/^[0-9]{10}$/.test(phone)){toast('Enter a valid 10-digit mobile number');return}
-    if(password.length<8){toast('Password must be at least 8 characters');return}
-    if(role==='farmer'&&!farmName){toast('Enter your farm name');return}
-    const name=role==='farmer'?(farmName||'Farmer'):'AgriNex Customer';
-    try{const d=await api('/api/auth/register',{method:'POST',body:JSON.stringify({phone,name,password,role,farm_name:farmName||null})});storage.set('ff_access_token',d.access_token);currentUser={id:d.user.id,name:d.user.name,contact:d.user.phone,role:d.user.role,farmerStatus:d.user.farmer_status||'not_applicable',preferredLanguage:d.user.preferred_language||'en',farmName:d.user.farm_name||'',signedInAt:new Date().toISOString()};storage.set('ff_user',currentUser);closeModals();updateProfileUI();renderAccountActions();backendReady=true;await Promise.allSettled([syncProducts(),syncCart(),syncAddresses(),syncOrders(),syncNotifications()]);toast('Account created and signed in');}
-    catch(e){toast(e.message||'Could not create account')}
-  };
-  window.addToCartById=async function(id,qty=1){
-    const p=products.find(x=>x.id===id); if(!p){toast('Product not found');return false}
-    if(p.serverId && token()){
-      try{await api('/api/cart',{method:'POST',body:JSON.stringify({product_id:p.serverId,quantity:qty})});await syncCart();toast(`${p.name} added to cart`);return true}catch(e){toast(e.message||'Unable to add to cart');return false}
-    }
-    const found=cart.find(x=>x.id===p.id);const next=(found?.qty||0)+qty;if(next>p.stock){toast('Maximum available stock reached');return false}if(found)found.qty=next;else cart.push({...p,qty});persist();updateBadges();renderCart();toast(`${p.name} added to cart`);return true;
+  window.registerBackendUser=function(){
+    const role=$('loginRole')?.value||'choose';
+    closeModals();
+    window.openAuthPortal?.(role==='farmer'?'farmer':role==='customer'?'customer':'choose');
+    toast('Use phone verification to create your AgriNex account.');
   };
 
-  window.changeQtyById=async function(id,d){const item=cart.find(x=>x.id===id);if(!item)return;const next=Math.max(0,Number(item.qty)+d);if(item.serverId&&token()){try{if(next===0)await api('/api/cart/'+item.serverId,{method:'DELETE'});else await api('/api/cart/'+item.serverId,{method:'PATCH',body:JSON.stringify({product_id:item.serverId,quantity:next})});await syncCart();}catch(e){toast(e.message||'Cart update failed')}return;}item.qty=next;if(next===0)cart=cart.filter(x=>x.id!==id);persist();updateBadges();renderCart();};
-  window.removeCartById=async function(id){const item=cart.find(x=>x.id===id);if(!item)return;if(item.serverId&&token()){try{await api('/api/cart/'+item.serverId,{method:'DELETE'});await syncCart();toast(`${item.name} removed from cart`);}catch(e){toast(e.message||'Unable to remove item')}return;}cart=cart.filter(x=>x.id!==id);persist();renderCart();updateBadges();toast(`${item.name} removed from cart`);};
-  window.updateCartQty=async function(id,delta){
-    const c=cart.find(x=>x.id===id);if(!c)return;const q=Math.max(0,Number(c.qty)+delta);
-    if(c.serverId&&token()){try{if(q===0)await api('/api/cart/'+c.serverId,{method:'DELETE'});else await api('/api/cart/'+c.serverId,{method:'PATCH',body:JSON.stringify({product_id:c.serverId,quantity:q})});await syncCart();return;}catch(e){toast(e.message||'Cart update failed');return}}
-  };
   window.addProduct=async function(){
     const n=$('newName').value.trim(), price=Number($('newPrice').value), market=Number($('newMarket').value)||price, stock=Math.max(0,Number($('newStock').value)||0), unit=$('newUnit').value, image=$('newImage').value.trim(), category=$('newCategory').value;
     if(!n||!price){toast('Enter a product name and selling price');return}
