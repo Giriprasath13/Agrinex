@@ -786,7 +786,7 @@
     <section class="page" id="notifications"><div class="section-head"><div><h2>Notifications</h2><p>Order, stock and price alerts in one place.</p></div><button class="btn btn-light" onclick="clearNotifications()">Mark all read</button></div><div class="card" id="notificationsList"></div></section>
 
     <section class="page" id="ai"><div class="section-head"><div><h2>Farm AI</h2><p>Task-oriented help for farmers and consumers. This frontend uses demo responses; connect your AI/API key for live intelligence.</p></div><span class="location-chip">🤖 AI Assistant</span></div><div class="api-note" style="margin:0 0 12px">API-ready: set <b>localStorage.ff_ai_endpoint</b> to your secure backend endpoint. <button class="btn btn-light" style="float:right;padding:5px 8px;font-size:9px" onclick="const u=prompt('FastAPI base URL',getApiBase()||'http://localhost:8000');if(u!==null){storage.set('ff_api_base',u.trim());checkApiHealth()}" >Configure backend</button> Never put an LLM secret directly in this HTML.</div><div class="ai-grid"><div class="quick-ai"><button class="quick-card" onclick="askAI('What should I price my tomato?')"><b>💰 Tomato price</b><span>Recommend a price</span></button><button class="quick-card" onclick="askAI('Weather for my farm')"><b>🌦️ Farm weather</b><span>Advisory placeholder</span></button><button class="quick-card" onclick="askAI('Which crop should I grow?')"><b>🌾 Crop recommendation</b><span>Choose crops by conditions</span></button><button class="quick-card" onclick="askAI('What is today\'s demand?')"><b>📈 Today's demand</b><span>Demand signal placeholder</span></button><button class="quick-card" onclick="askAI('Find cheapest vegetables')"><b>🛒 Cheapest vegetables</b><span>Consumer shopping help</span></button><button class="quick-card" onclick="askAI('Find farmers nearby')"><b>📍 Farmers nearby</b><span>Compare distance</span></button></div><div class="card chat"><div class="chat-head"><div><b>🌱 Farm AI</b><div class="small">Natural-language assistant</div></div><button class="btn btn-light" onclick="clearChat()">Clear</button></div><div class="chat-body" id="chatBody"><div class="bubble ai">Hello! I can help with pricing, demand, crop planning, delivery-friendly shopping and marketplace comparisons. Try a task above.</div></div><div class="chat-input"><input id="aiInput" placeholder="Ask anything..." onkeydown="if(event.key==='Enter')sendAI()"><button class="btn btn-primary" onclick="sendAI()">➤</button></div></div></div></section>
-  <section class="page" id="admin"><div class="section-head"><div><h2>Admin console</h2><p>Restricted demo architecture for moderation, verification, complaints and platform analytics.</p></div></div><div class="dashboard-grid"><div class="card kpi"><span>Users</span><strong>Backend</strong><em>API required</em></div><div class="card kpi"><span>Farmer verification</span><strong>Queue</strong><em>Backend workflow</em></div><div class="card kpi"><span>Reports</span><strong>Ready</strong><em>Schema prepared</em></div><div class="card kpi"><span>Moderation</span><strong>Guarded</strong><em>Role-based access</em></div></div></section>
+  <section class="page" id="admin"><div class="section-head"><div><h2>AgriNex administration</h2><p>Restricted to user IDs explicitly added to the private administrator allowlist in Supabase.</p></div><button class="btn btn-light" onclick="loadAdminConsole()">↻ Refresh queue</button></div><div id="adminAccessStatus" class="api-note">Checking administrator access…</div><div class="card tablewrap" style="margin-top:14px"><h3 style="padding:16px 16px 0">Farmer verification queue</h3><table class="table"><thead><tr><th>Farmer</th><th>Farm</th><th>Location</th><th>Submitted</th><th>Status</th><th>Review</th></tr></thead><tbody id="adminFarmerApplications"><tr><td colspan="6">Open the admin console to load applications.</td></tr></tbody></table></div></section>
   
 <section class="page" id="supplychain">
   <div class="ff-appbar"><span class="ff-app-title">🌾 AgriNex • SIH26033 Control Center</span><button onclick="ffPSRecalculate()">↻ Refresh AI</button><button onclick="ffPSOpenBatch()">📦 New batch</button><button onclick="showPage('marketplace')">🛒 Marketplace</button></div>
@@ -922,7 +922,7 @@
   </main>
 
   <nav class="mobile-nav"><button data-page="home" onclick="showPage('home')"><b>🏠</b>Home</button><button data-page="marketplace" onclick="showPage('marketplace')"><b>🔎</b>Shop</button><button data-page="bulkMarketplace" onclick="showPage('bulkMarketplace')"><b>📦</b>Bulk</button><button data-page="cart" onclick="showPage('cart')"><b>🛒</b>Cart</button><button data-page="orders" onclick="showPage('orders')"><b>📋</b>Orders</button></nav>
-  <footer class="footer"><div class="footer-grid"><div><h3>AgriNex</h3><p>A direct farm-to-family marketplace built around simple shopping, transparent pricing, farmer trust and useful farm tools.</p><small>© 2026 AgriNex • Upgradable single-file prototype</small></div><div><h3>Shop</h3><button onclick="showPage('marketplace')">Marketplace</button><button onclick="showPage('wishlist')">Wishlist</button><button onclick="showPage('orders')">Orders</button><button onclick="showPage('farmers')">Farmers near me</button></div><div><h3>Farmers</h3><button onclick="showPage('farmer')">Dashboard</button><button onclick="showPage('inventory')">Inventory</button><button onclick="showPage('ai')">Farm AI</button></div><div><h3>Platform</h3><button onclick="toast('Tamil interface is planned for the next release')">🌐 Language: English</button><button onclick="useMyLocation()">📍 Use my location</button><button onclick="toast('Production support can connect to WhatsApp/helpdesk API')">Help center</button></div></div></footer>
+  <footer class="footer"><div class="footer-grid"><div><h3>AgriNex</h3><p>A direct farm-to-family marketplace built around simple shopping, transparent pricing, farmer trust and useful farm tools.</p><small>© 2026 AgriNex • Upgradable single-file prototype</small></div><div><h3>Shop</h3><button onclick="showPage('marketplace')">Marketplace</button><button onclick="showPage('wishlist')">Wishlist</button><button onclick="showPage('orders')">Orders</button><button onclick="showPage('farmers')">Farmers near me</button></div><div><h3>Farmers</h3><button onclick="showPage('farmer')">Dashboard</button><button onclick="showPage('inventory')">Inventory</button><button onclick="showPage('ai')">Farm AI</button></div><div><h3>Platform</h3><button onclick="openAdminConsole()">🛡️ Admin console</button><button onclick="toggleFarmerLanguage()">🌐 Farmer language: English / தமிழ்</button><button onclick="useMyLocation()">📍 Use my location</button><button onclick="toast('Production support can connect to WhatsApp/helpdesk API')">Help center</button></div></div></footer>
 </div>
 
 
@@ -1053,9 +1053,9 @@ let cart=[];let wish=[];
 let addresses=[{label:'Home',name:'',mobile:'',text:'123 Green Valley Road, Coimbatore',city:'Coimbatore',state:'Tamil Nadu',pin:'641001'}];
 let currentCategory='All';let checkoutStep=1;let selectedAddress=0;let selectedPayment='UPI';let trackingIndex=0;
 const defaultNotifications=[{icon:'🚚',title:'Order on the way',text:'Order #FF10261 is expected to arrive today.',unread:true},{icon:'💰',title:'Price update',text:'Tomato demand near you increased 8%.',unread:true},{icon:'📦',title:'Inventory warning',text:'Organic carrots have 18 kg left.',unread:true},{icon:'✅',title:'Farmer verified',text:'Green Leaf Farm completed farm verification.',unread:false}];
-let notifications=storage.get('ff_notifications',defaultNotifications)||defaultNotifications;
+let notifications=storage.get('ff_notifications',[])||[];
 let reviews=storage.get('ff_reviews',[])||[];
-let orders=[{id:'#FF10261',orderItems:[],items:'Fresh Vegetables',total:350,status:'Out for Delivery',eta:'11:30 AM',created:'Today'}];
+let orders=[];
 function stateKey(){return currentUser?'ff_state_'+String(currentUser.contact||'guest').toLowerCase():'ff_state_guest'}
 function migrateLegacyState(){const legacy=storage.get('ff_state',null);if(!legacy)return null;return {...legacy,wish:(legacy.wish||[]).map(x=>{if(typeof x==='string'&&products.some(p=>p.id===x))return x;const n=Number(x);return Number.isInteger(n)&&products[n]?products[n].id:null}).filter(Boolean),cart:(legacy.cart||[]).map(x=>{const p=products.find(p=>p.id===x.id)||products.find(p=>p.name===x.name);return p?{id:p.id,qty:Math.max(1,Number(x.qty)||1)}:null}).filter(Boolean)}}
 function normalizeOrder(o){
@@ -1076,13 +1076,13 @@ function loadState(){
     orders=(saved.orders||orders).map(normalizeOrder);
     addresses=saved.addresses||addresses;
   }
-  if(!addresses.length)addresses=[{label:'Home',name:'',mobile:'',text:'123 Green Valley Road, Coimbatore',city:'Coimbatore',state:'Tamil Nadu',pin:'641001'}];
+  if(!Array.isArray(addresses))addresses=[];
   if(currentUser)updateProfileUI();
 }
 function persist(){storage.set(stateKey(),{cart:cart.map(x=>({id:x.id,qty:x.qty})),wish,orders,addresses});storage.set('ff_products',products)}
 loadState()
 function $(id){return document.getElementById(id)}
-function showPage(id){if(id!=='productDetailsPage'&&location.hash.startsWith('#product/'))history.replaceState({agrinexPage:id},'',location.pathname+location.search);if(id==='admin'&&(!currentUser||currentUser.role!=='admin')){toast('Admin access is restricted to authorized accounts.');return}const el=$(id);if(!el){toast('That page is not available yet.');return}document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));el.classList.add('active');window.scrollTo({top:0,behavior:'smooth'});document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===id));switch(id){case'home':renderHome();break;case'categories':renderCategories();break;case'marketplace':renderMarketplace();break;case'cart':renderCart();break;case'wishlist':renderWishlist();break;case'checkout':renderCheckout();break;case'orders':renderOrders();break;case'tracking':renderTracking();break;case'farmers':renderFarmers();break;case'farmer':renderFarmer();break;case'inventory':renderInventory();break;case'notifications':renderNotifications();break;case'ai':break;case'supplychain':ffPSRender();break}}
+function showPage(id){if(id!=='productDetailsPage'&&location.hash.startsWith('#product/'))history.replaceState({agrinexPage:id},'',location.pathname+location.search);const el=$(id);if(!el){toast('That page is not available yet.');return}document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));el.classList.add('active');window.scrollTo({top:0,behavior:'smooth'});document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===id));switch(id){case'home':renderHome();break;case'categories':renderCategories();break;case'marketplace':renderMarketplace();break;case'cart':renderCart();break;case'wishlist':renderWishlist();break;case'checkout':renderCheckout();break;case'orders':renderOrders();break;case'tracking':renderTracking();break;case'farmers':renderFarmers();break;case'farmer':renderFarmer();break;case'inventory':renderInventory();break;case'notifications':renderNotifications();break;case'ai':break;case'supplychain':ffPSRender();break}}
 function setCategory(c){currentCategory=c;showPage('marketplace');$('filterCategory').value=c;renderMarketplace()}
 function globalSearch(){const q=$('globalSearch').value.trim();if(q){saveRecentSearch(q);showPage('marketplace');$('marketSearch').value=q;renderMarketplace();hideSearchSuggestions()}else showPage('marketplace')}
 function updateSearchSuggestions(){const dl=$('searchSuggestions'),md=$('marketSuggestions');if(!dl)return;const vals=[...recentSearches,...products.map(p=>p.name),...products.map(p=>p.farmer)].filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i).slice(0,25);dl.innerHTML=vals.map(v=>`<option value="${safe(v)}"></option>`).join('');if(md)md.innerHTML=products.map(p=>`<option value="${safe(p.name)}"></option>`).join('')}
@@ -1373,7 +1373,17 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
   }
   async function syncCart(){
     if(!token()) return;
-    const rows=await api('/api/cart'); cart=rows.map(mapCartRow);persist();updateBadges();renderCart();if(document.getElementById('miniCartDrawer')?.classList.contains('show'))renderMiniCart();
+    let rows=await api('/api/cart');
+    if((!Array.isArray(rows)||!rows.length)&&currentUser?.role==='customer'&&Array.isArray(cart)&&cart.length){
+      const guestItems=cart.slice();
+      for(const item of guestItems){
+        const product=products.find(p=>p.id===item.id);
+        if(!product?.serverId)continue;
+        try{await api('/api/cart',{method:'POST',body:JSON.stringify({product_id:product.serverId,quantity:Number(item.qty)||1})});}catch(_){}
+      }
+      rows=await api('/api/cart');
+    }
+    cart=(rows||[]).map(mapCartRow);persist();updateBadges();renderCart();if(document.getElementById('miniCartDrawer')?.classList.contains('show'))renderMiniCart();
   }
   async function syncAddresses(){if(!token())return; const rows=await api('/api/addresses'); addresses=(rows||[]).map(x=>({id:x.id,label:x.label,name:x.recipient_name||currentUser?.name||'',mobile:x.mobile||currentUser?.contact||'',text:x.line1,city:x.city,state:x.state,pin:x.pincode,landmark:x.landmark})); selectedAddress=Math.max(0,Math.min(selectedAddress,addresses.length-1)); persist();}
   async function syncOrders(){if(!token())return; const rows=await api('/api/orders'); orders=rows.map(mapOrder); if(!orders.length)orders=[]; persist(); renderOrders(); renderTracking();}
@@ -1383,7 +1393,7 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
     try{
       await api('/health'); backendReady=true; backendStatus();
       if(token()){
-        try{const me=await api('/api/auth/me');currentUser={name:me.name,contact:me.phone,role:me.role,farmerStatus:me.farmer_status||'not_applicable',signedInAt:new Date().toISOString()};storage.set('ff_user',currentUser);updateProfileUI();}catch(_){storage.remove('ff_access_token');currentUser=null;storage.remove('ff_user');}
+        try{const me=await api('/api/auth/me');currentUser={id:me.id,name:me.name,contact:me.phone,role:me.role,farmerStatus:me.farmer_status||'not_applicable',preferredLanguage:me.preferred_language||'en',farmName:me.farm_name||'',signedInAt:new Date().toISOString()};storage.set('ff_user',currentUser);updateProfileUI();}catch(_){storage.remove('ff_access_token');currentUser=null;storage.remove('ff_user');}
       }
       await syncProducts();
       if(token()){await Promise.allSettled([syncCart(),syncAddresses(),syncOrders(),syncNotifications()]);}
@@ -1473,6 +1483,7 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
   function authStoreSession(d){
     storage.set('ff_access_token',d.access_token);
     currentUser={
+      id:d.user.id,
       name:d.user.name,
       contact:d.user.phone,
       role:d.user.role,
