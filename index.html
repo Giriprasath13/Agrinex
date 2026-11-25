@@ -3699,7 +3699,7 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
     demoSession(account);
     if(typeof window.closeAuthPortal === 'function') window.closeAuthPortal();
     if(account.role === 'farmer'){
-      window.showPage('farmer');
+      window.showPage('inventory');
       toast(source === 'register'
         ? 'Demo farmer account created. Selling tools are available in this browser only.'
         : 'Demo farmer sign-in successful.');
@@ -3952,6 +3952,137 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
     accounts:() => accounts().map(({passwordSalt,passwordDigest,...safe}) => safe),
     clearAccounts:() => { saveAccounts([]); window.logoutDemo(); }
   };
+})();
+</script>
+
+
+<style id="ff-farmer-inventory-v1">
+#inventory .ff-inv-shell{display:grid;gap:18px}
+#inventory .ff-inv-hero{padding:26px;border-radius:22px;background:linear-gradient(125deg,#143d2b,#236b45 65%,#36865a);color:#fff;display:flex;justify-content:space-between;gap:20px;align-items:center;overflow:hidden}
+#inventory .ff-inv-hero h2{font-size:clamp(23px,3vw,34px);margin:7px 0;color:#fff}
+#inventory .ff-inv-hero p{margin:0;color:#d9f2e2;max-width:580px;line-height:1.6}
+#inventory .ff-inv-eyebrow{font-size:10px;letter-spacing:1.8px;font-weight:900;color:#b9e9c8}
+#inventory .ff-inv-farm{font-size:12px;color:#e5f7e9;margin-top:12px}
+#inventory .ff-inv-hero-art{font-size:68px;opacity:.9}
+#inventory .ff-inv-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+#inventory .ff-inv-stat{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px}
+#inventory .ff-inv-stat span{display:block;color:var(--muted);font-size:11px;font-weight:700}
+#inventory .ff-inv-stat strong{display:block;font-size:25px;margin-top:6px;color:var(--ink)}
+#inventory .ff-inv-layout{display:grid;grid-template-columns:minmax(270px,.8fr) minmax(0,1.5fr);gap:16px;align-items:start}
+#inventory .ff-inv-panel{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;min-width:0}
+#inventory .ff-inv-panel h3{margin:0 0 5px;font-size:17px}
+#inventory .ff-inv-help{font-size:11px;color:var(--muted);margin:0 0 16px;line-height:1.5}
+#inventory .ff-inv-form{display:grid;gap:11px}
+#inventory .ff-inv-field{display:grid;gap:5px}
+#inventory .ff-inv-field label{font-size:11px;font-weight:800;color:#405348}
+#inventory .ff-inv-field input,#inventory .ff-inv-field select,#inventory .ff-inv-field textarea{width:100%;border:1px solid #dce6df;border-radius:10px;padding:10px 11px;font:inherit;font-size:12px;background:#fbfdfb;color:var(--ink);min-width:0}
+#inventory .ff-inv-two{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+#inventory .ff-inv-submit{width:100%;border:0;border-radius:11px;background:#207348;color:white;padding:12px;font-weight:900;cursor:pointer}
+#inventory .ff-inv-list-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
+#inventory .ff-inv-list{display:grid;gap:10px}
+#inventory .ff-inv-item{border:1px solid #e4ebe6;border-radius:14px;padding:12px;display:grid;grid-template-columns:54px minmax(0,1fr) auto;gap:12px;align-items:center}
+#inventory .ff-inv-thumb{height:54px;width:54px;border-radius:12px;background:#edf6ef;display:grid;place-items:center;font-size:25px;overflow:hidden}
+#inventory .ff-inv-thumb img{width:100%;height:100%;object-fit:cover}
+#inventory .ff-inv-item h4{margin:0 0 4px;font-size:13px}
+#inventory .ff-inv-meta{font-size:10px;color:var(--muted);line-height:1.5}
+#inventory .ff-inv-price{font-weight:900;font-size:13px;color:#1c6b40;white-space:nowrap}
+#inventory .ff-inv-actions{display:flex;gap:6px;margin-top:7px;flex-wrap:wrap}
+#inventory .ff-inv-actions button{border:1px solid #dce7df;background:#fff;border-radius:8px;padding:5px 8px;font-size:10px;font-weight:800;cursor:pointer}
+#inventory .ff-inv-empty{padding:30px 12px;text-align:center;border:1px dashed #cbd9ce;border-radius:14px;color:var(--muted);font-size:12px}
+#inventory .ff-inv-demo-note{font-size:10px;color:#72551a;background:#fff8e8;border:1px solid #f2e3bd;padding:10px 12px;border-radius:11px;line-height:1.5}
+#inventory .tablewrap{display:none}
+@media(max-width:760px){#inventory .ff-inv-layout{grid-template-columns:1fr}#inventory .ff-inv-hero-art{display:none}}
+@media(max-width:460px){#inventory .ff-inv-stats{grid-template-columns:1fr 1fr}#inventory .ff-inv-stats .ff-inv-stat:last-child{grid-column:1/-1}#inventory .ff-inv-item{grid-template-columns:44px minmax(0,1fr)}#inventory .ff-inv-thumb{width:44px;height:44px}#inventory .ff-inv-price{grid-column:2}}
+</style>
+<script id="ff-farmer-inventory-v1">
+(function(){
+  const page=document.getElementById('inventory');
+  if(!page)return;
+  page.innerHTML=`
+    <div class="ff-inv-shell">
+      <div class="ff-inv-hero">
+        <div><div class="ff-inv-eyebrow">AGRINEX FARMER STUDIO</div><h2>Inventory & Sell</h2><p>Add your fresh harvest, set your selling price and keep track of the quantity available at your farm.</p><div class="ff-inv-farm">🌾 <b id="ffInvFarmName">Your farm</b> · Farmer workspace</div></div>
+        <div class="ff-inv-hero-art">🌱</div>
+      </div>
+      <div class="ff-inv-stats">
+        <div class="ff-inv-stat"><span>Products listed</span><strong id="ffInvCount">0</strong></div>
+        <div class="ff-inv-stat"><span>Total stock</span><strong id="ffInvStock">0</strong></div>
+        <div class="ff-inv-stat"><span>Estimated listing value</span><strong id="ffInvValue">₹0</strong></div>
+      </div>
+      <div class="ff-inv-layout">
+        <section class="ff-inv-panel">
+          <h3>＋ Add product to sell</h3><p class="ff-inv-help">Enter the harvest details below. Your listing is saved locally in this browser demo.</p>
+          <form class="ff-inv-form" id="ffInvForm">
+            <div class="ff-inv-field"><label for="ffInvName">Product name *</label><input id="ffInvName" required maxlength="70" placeholder="e.g. Fresh tomatoes"></div>
+            <div class="ff-inv-two">
+              <div class="ff-inv-field"><label for="ffInvCategory">Category</label><select id="ffInvCategory"><option>Vegetables</option><option>Fruits</option><option>Grains</option><option>Dairy</option><option>Organic</option><option>Other</option></select></div>
+              <div class="ff-inv-field"><label for="ffInvUnit">Unit</label><select id="ffInvUnit"><option value="kg">Kilogram (kg)</option><option value="bag">Bag</option><option value="crate">Crate</option><option value="dozen">Dozen</option><option value="unit">Piece</option></select></div>
+            </div>
+            <div class="ff-inv-two">
+              <div class="ff-inv-field"><label for="ffInvPrice">Selling price (₹) *</label><input id="ffInvPrice" type="number" min="1" step="0.01" required placeholder="40"></div>
+              <div class="ff-inv-field"><label for="ffInvStock">Available quantity *</label><input id="ffInvStock" type="number" min="0.1" step="0.1" required placeholder="50"></div>
+            </div>
+            <div class="ff-inv-field"><label for="ffInvMarket">Market reference price (₹)</label><input id="ffInvMarket" type="number" min="0" step="0.01" placeholder="Optional"></div>
+            <div class="ff-inv-field"><label for="ffInvImage">Product photo URL (optional)</label><input id="ffInvImage" type="url" placeholder="https://..."></div>
+            <div class="ff-inv-field"><label for="ffInvDescription">Description</label><textarea id="ffInvDescription" rows="3" maxlength="300" placeholder="Freshly harvested, quality details..."></textarea></div>
+            <button class="ff-inv-submit" type="submit">＋ Add to my inventory</button>
+            <div class="ff-inv-demo-note">Demo mode: products are stored only in this browser. They are not uploaded to a live marketplace or visible to other customers.</div>
+          </form>
+        </section>
+        <section class="ff-inv-panel">
+          <div class="ff-inv-list-head"><div><h3>My products</h3><p class="ff-inv-help" style="margin:4px 0 0">Manage the items you have added for sale.</p></div><span class="status ok">My farm</span></div>
+          <div class="ff-inv-list" id="ffInvProducts"></div>
+        </section>
+      </div>
+    </div>`;
+  function ownerId(){return 'farmer-'+String(window.currentUser?.contact||'').replace(/\D/g,'');}
+  function mine(){return (window.products||[]).filter(p=>p.farmerId===ownerId());}
+  function render(){
+    const user=window.currentUser||{};
+    const list=mine();
+    const total=list.reduce((n,p)=>n+Math.max(0,Number(p.stock)||0),0);
+    const value=list.reduce((n,p)=>n+Math.max(0,Number(p.stock)||0)*Math.max(0,Number(p.price)||0),0);
+    document.getElementById('ffInvFarmName').textContent=user.farmName||user.name||'Your farm';
+    document.getElementById('ffInvCount').textContent=list.length;
+    document.getElementById('ffInvStock').textContent=total.toLocaleString('en-IN')+' units';
+    document.getElementById('ffInvValue').textContent='₹'+Math.round(value).toLocaleString('en-IN');
+    const host=document.getElementById('ffInvProducts');
+    if(!list.length){host.innerHTML='<div class="ff-inv-empty"><div style="font-size:30px;margin-bottom:8px">🧺</div><b>Your inventory is empty</b><p>Add your first harvest using the form.</p></div>';return;}
+    host.innerHTML=list.map(p=>{
+      const image=p.image?'<img src="'+escAttr(p.image)+'" alt="">':'🌿';
+      const stock=Number(p.stock)||0;
+      return '<article class="ff-inv-item"><div class="ff-inv-thumb">'+image+'</div><div><h4>'+safe(p.name)+'</h4><div class="ff-inv-meta">'+safe(p.category||'Produce')+' · '+stock+' '+safe(p.unit||'kg')+' available<br><span class="status '+(stock<=0?'bad':stock<=10?'warn':'ok')+'">'+(stock<=0?'Out of stock':stock<=10?'Low stock':'Available')+'</span></div><div class="ff-inv-actions"><button type="button" data-edit="'+safe(p.id)+'">Edit</button><button type="button" data-stock="'+safe(p.id)+'">+10 stock</button><button type="button" data-delete="'+safe(p.id)+'">Delete</button></div></div><div class="ff-inv-price">₹'+Number(p.price).toFixed(2)+'/'+safe(p.unit||'kg')+'</div></article>';
+    }).join('');
+  }
+  function escAttr(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  window.renderInventory=render;
+  document.getElementById('ffInvForm').addEventListener('submit',function(e){
+    e.preventDefault();
+    if(!window.currentUser||window.currentUser.role!=='farmer'){toast('Please sign in with a farmer account.');return;}
+    const name=document.getElementById('ffInvName').value.trim();
+    const price=Number(document.getElementById('ffInvPrice').value);
+    const stock=Number(document.getElementById('ffInvStock').value);
+    const market=Number(document.getElementById('ffInvMarket').value)||price;
+    if(name.length<2||!Number.isFinite(price)||price<=0||!Number.isFinite(stock)||stock<0||market<0){toast('Enter a product name, valid price and quantity.');return;}
+    const category=document.getElementById('ffInvCategory').value;
+    const unit=document.getElementById('ffInvUnit').value;
+    const image=document.getElementById('ffInvImage').value.trim();
+    const p={id:makeId('P'),name,category,price,market,stock,unit,image,description:document.getElementById('ffInvDescription').value.trim(),farmer:window.currentUser.farmName||window.currentUser.name,farmerId:ownerId(),emoji:'🌱',rating:5,distance:1.2,organic:category==='Organic',fresh:'Today',verified:false,harvest:0,delivery:'Demo pickup',hours:1,location:'',demoOnly:true};
+    products.unshift(p);persist();this.reset();render();if(typeof renderHome==='function')renderHome();if(typeof renderMarketplace==='function')renderMarketplace();toast(name+' added to your local inventory.');
+  });
+  document.getElementById('ffInvProducts').addEventListener('click',function(e){
+    const b=e.target.closest('button');if(!b)return;
+    const id=b.dataset.edit||b.dataset.stock||b.dataset.delete;
+    const p=products.find(x=>x.id===id&&x.farmerId===ownerId());if(!p)return;
+    if(b.dataset.edit!==undefined){
+      const name=prompt('Product name',p.name);if(name===null)return;
+      const price=Number(prompt('Selling price (₹)',p.price));if(!name.trim()||!Number.isFinite(price)||price<=0){toast('Enter valid product details.');return;}
+      const stock=Number(prompt('Available quantity ('+(p.unit||'kg')+')',p.stock));if(!Number.isFinite(stock)||stock<0){toast('Enter a valid quantity.');return;}
+      p.name=name.trim();p.price=price;p.stock=stock;persist();render();toast('Product updated.');
+    }else if(b.dataset.stock!==undefined){p.stock=Number(p.stock||0)+10;persist();render();toast('10 units added to stock.');}
+    else if(b.dataset.delete!==undefined&&confirm('Delete '+p.name+' from your inventory?')){products=products.filter(x=>x.id!==id);persist();render();if(typeof renderHome==='function')renderHome();if(typeof renderMarketplace==='function')renderMarketplace();toast('Product removed from inventory.');}
+  });
+  render();
 })();
 </script>
 
