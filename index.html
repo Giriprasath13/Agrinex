@@ -2219,7 +2219,8 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
   }
 
   // Patch sync indicator by observing common state changes.
-  setInterval(()=>{syncIndicator();ffCartProgress();ffRecent();wrapProductDetails();},1400);
+  // Keep convenience UI refreshes low-frequency; the main app already has its own stock loop.
+  setInterval(()=>{syncIndicator();ffCartProgress();ffRecent();wrapProductDetails();},15000);
   window.addEventListener('online',()=>toast('You are back online'));window.addEventListener('offline',()=>toast('Offline mode: your local cart remains available'));
   ffToggleSimple(getStorage(S,false));
   setStorage(F,new Date().toISOString());
