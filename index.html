@@ -2478,6 +2478,12 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
   }
 
   async function loadPublicProducts(){
+    // Frontend-only demo mode must keep its local starter catalogue.
+    // The API may return an empty array and would otherwise overwrite seeded products.
+    if(window.ffDemoAuth?.enabled || storage.get('ff_demo_mode',false)){
+      renderHome();renderMarketplace();renderCategories();renderFarmers();
+      return products;
+    }
     if(!token()&& !window.ffApi) return [];
     const rows=await api()('/api/products?limit=200');
     const mapped=(rows||[]).map(productMap);
