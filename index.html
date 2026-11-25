@@ -4115,5 +4115,44 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
 })();
 </script>
 
+
+<script id="ff-global-state-bridge-v1">
+(function(){
+  function aliasState(name,getValue,setValue){
+    const desc=Object.getOwnPropertyDescriptor(window,name);
+    if(desc&&!desc.configurable)return;
+    Object.defineProperty(window,name,{configurable:true,enumerable:false,get:getValue,set:setValue});
+  }
+  aliasState('products',()=>products,value=>{if(Array.isArray(value))products=value;});
+  aliasState('wish',()=>wish,value=>{if(Array.isArray(value))wish=value;});
+  aliasState('cart',()=>cart,value=>{if(Array.isArray(value))cart=value;});
+  aliasState('currentUser',()=>currentUser,value=>{currentUser=value;});
+
+  window.toggleWish=function(id){return toggleWish(String(id));};
+  window.addToCartById=function(id,qty){return addToCartById(String(id),qty===undefined?1:Number(qty));};
+  window.renderWishlist=function(){return renderWishlist();};
+  window.updateBadges=function(){return updateBadges();};
+
+  const baseCard=productCard;
+  window.productCard=function(p){
+    let html=baseCard(p);
+    const id=JSON.stringify(String(p.id));
+    html=html.replace(
+      "onclick=\"toggleWish('"+p.id+"')\"",
+      "onclick='window.toggleWish("+id+")'"
+    );
+    html=html.replace(
+      "onclick=\"addToCartById('"+p.id+"')\"",
+      "onclick='window.addToCartById("+id+")'"
+    );
+    html=html.replace(
+      "onclick=\"openProductDetails('"+p.id+"')\"",
+      "onclick='window.openProductDetails("+id+")'"
+    );
+    return html;
+  };
+})();
+</script>
+
 </body>
 </html>
