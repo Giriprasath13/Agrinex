@@ -3465,7 +3465,8 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
     if(translatingPage||!document.body)return;
     translatingPage=true;
     try{
-      const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);
+      const translationRoot=document.querySelector('.page.active')||document.body;
+      const walker=document.createTreeWalker(translationRoot,NodeFilter.SHOW_TEXT);
       let node;
       while((node=walker.nextNode())){
         if(!originalTextNodes.has(node))originalTextNodes.set(node,node.nodeValue);
@@ -3478,7 +3479,7 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
         const desired=leading+translated+trailing;
         if(node.nodeValue!==desired)node.nodeValue=desired;
       }
-      document.querySelectorAll('[placeholder],[aria-label],[title]').forEach(el=>{
+      translationRoot.querySelectorAll('[placeholder],[aria-label],[title]').forEach(el=>{
         let saved=originalAttributes.get(el);
         if(!saved){saved={};originalAttributes.set(el,saved);}
         for(const attr of ['placeholder','aria-label','title']){
@@ -3507,8 +3508,8 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
     toast(farmerLanguage==='ta'?'தமிழ் மொழி தேர்ந்தெடுக்கப்பட்டது':'English selected');
   };
   if(document.body){
-    const languageObserver=new MutationObserver(()=>translateSharedPage());
-    languageObserver.observe(document.body,{childList:true,subtree:true,characterData:true});
+    // Do not observe the entire document: frequent UI updates would repeatedly rescan every page.
+    // Language refresh runs when the farmer changes pages or toggles the language.
     document.addEventListener('DOMContentLoaded',window.applyFarmerLanguage);
     window.addEventListener('load',window.applyFarmerLanguage);
   }
@@ -4035,10 +4036,10 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
         </section>
       </div>
     </div>`;
-  function ownerId(){return 'farmer-'+String(window.currentUser?.contact||'').replace(/\D/g,'');}
-  function mine(){return (window.products||[]).filter(p=>p.farmerId===ownerId());}
+  function ownerId(){return 'farmer-'+String(currentUser?.contact||'').replace(/\D/g,'');}
+  function mine(){return (Array.isArray(products)?products:[]).filter(p=>p.farmerId===ownerId());}
   function render(){
-    const user=window.currentUser||{};
+    const user=typeof currentUser!=='undefined'&&currentUser?currentUser:{};
     const list=mine();
     const total=list.reduce((n,p)=>n+Math.max(0,Number(p.stock)||0),0);
     const value=list.reduce((n,p)=>n+Math.max(0,Number(p.stock)||0)*Math.max(0,Number(p.price)||0),0);
@@ -4058,7 +4059,7 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
   window.renderInventory=render;
   document.getElementById('ffInvForm').addEventListener('submit',function(e){
     e.preventDefault();
-    if(!window.currentUser||window.currentUser.role!=='farmer'){toast('Please sign in with a farmer account.');return;}
+    if(typeof currentUser==='undefined'||!currentUser||currentUser.role!=='farmer'){toast('Please sign in with a farmer account.');return;}
     const name=document.getElementById('ffInvName').value.trim();
     const price=Number(document.getElementById('ffInvPrice').value);
     const stock=Number(document.getElementById('ffInvStock').value);
@@ -4067,7 +4068,7 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
     const category=document.getElementById('ffInvCategory').value;
     const unit=document.getElementById('ffInvUnit').value;
     const image=document.getElementById('ffInvImage').value.trim();
-    const p={id:makeId('P'),name,category,price,market,stock,unit,image,description:document.getElementById('ffInvDescription').value.trim(),farmer:window.currentUser.farmName||window.currentUser.name,farmerId:ownerId(),emoji:'🌱',rating:5,distance:1.2,organic:category==='Organic',fresh:'Today',verified:false,harvest:0,delivery:'Demo pickup',hours:1,location:'',demoOnly:true};
+    const p={id:makeId('P'),name,category,price,market,stock,unit,image,description:document.getElementById('ffInvDescription').value.trim(),farmer:currentUser.farmName||currentUser.name,farmerId:ownerId(),emoji:'🌱',rating:5,distance:1.2,organic:category==='Organic',fresh:'Today',verified:false,harvest:0,delivery:'Demo pickup',hours:1,location:'',demoOnly:true};
     products.unshift(p);persist();this.reset();render();if(typeof renderHome==='function')renderHome();if(typeof renderMarketplace==='function')renderMarketplace();toast(name+' added to your local inventory.');
   });
   document.getElementById('ffInvProducts').addEventListener('click',function(e){
