@@ -1132,6 +1132,27 @@ const imageRepairs={
   'Organic Ragi':'https://ooofarms.com/cdn/shop/files/finger_millet.png?v=1724300050&width=2000'
 };
 products.forEach(p=>{if(imageRepairs[p.name])p.image=imageRepairs[p.name]});
+
+// Recover the built-in demo catalogue if this browser has an empty or fully exhausted
+// copy of the starter products. Keep custom farmer listings and existing product IDs.
+const starterNames=new Set(seedProducts.map(p=>p.name));
+const hasAvailableStarter=products.some(p=>starterNames.has(p.name)&&Number(p.stock)>0);
+if(!hasAvailableStarter){
+  seedProducts.forEach(seed=>{
+    const existing=products.find(p=>p.name===seed.name);
+    if(existing){
+      existing.stock=Number(seed.stock)||1;
+      if(!(Number(existing.price)>0))existing.price=seed.price;
+      if(!existing.category)existing.category=seed.category;
+      if(!existing.unit)existing.unit=seed.unit;
+      if(!existing.emoji)existing.emoji=seed.emoji;
+      if(!existing.farmer)existing.farmer=seed.farmer;
+    }else{
+      products.push({...seed,id:makeId('P')});
+    }
+  });
+  products=ensureProductIds(products);
+}
 storage.set('ff_products',products);
 let recentSearches=storage.get('ff_recent_searches',[])||[];
 let currentUser=storage.get('ff_user',null);
