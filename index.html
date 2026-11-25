@@ -2198,7 +2198,7 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
   }
   window.ffRecentOpen=function(id){try{openProductDetails(id)}catch(_){ffGo('marketplace')}};
   function ffTrackRecentFromProduct(id){
-    const p=(window.products||[]).find(x=>String(x.id)===String(id));if(!p)return;
+    const p=(typeof products!=='undefined'&&Array.isArray(products)?products:[]).find(x=>String(x.id)===String(id));if(!p)return;
     const arr=getStorage(R,[]).filter(x=>String(x.id)!==String(id));arr.unshift({id:p.id,name:p.name,price:p.price,unit:p.unit,image:p.image});setStorage(R,arr.slice(0,8));setTimeout(ffRecent,50);
   }
 
@@ -2317,7 +2317,7 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
 (function(){
   function pdGet(id){return document.getElementById(id)}
   function pdText(v){return typeof window.safe==='function'?safe(v):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
-  function pdProduct(id){return (window.products||[]).find(x=>String(x.id)===String(id))}
+  function pdProduct(id){return (typeof products!=='undefined'&&Array.isArray(products)?products:[]).find(x=>String(x.id)===String(id))}
   function pdClose(){
     const modal=pdGet('productDetailsModal');
     if(modal){modal.classList.remove('show');modal.setAttribute('aria-hidden','true');document.body.style.overflow=''}
@@ -2367,7 +2367,7 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
               <button class="btn btn-primary" ${stock<=0?'disabled':''} onclick="addToCartById('${pdText(p.id)}');closeProductDetails()">🛒 Add to cart</button>
               <button class="btn btn-soft" ${stock<=0?'disabled':''} onclick="buyNowById('${pdText(p.id)}')">⚡ Buy now</button>
               <button class="btn btn-soft" onclick='closeProductDetails();showFarmerProfile(${JSON.stringify(p.farmer)})'>👨‍🌾 Farmer</button>
-              <button class="btn btn-light" onclick="toggleWish('${pdText(p.id)}');openProductDetails('${pdText(p.id)}')">${(window.wish||[]).includes(p.id)?'♥ Saved':'♡ Wishlist'}</button>
+              <button class="btn btn-light" onclick="toggleWish('${pdText(p.id)}');openProductDetails('${pdText(p.id)}')">${(typeof wish!=='undefined'&&Array.isArray(wish)?wish:[]).includes(p.id)?'♥ Saved':'♡ Wishlist'}</button>
             </div>
           </div>
         </div>
