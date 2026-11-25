@@ -1204,7 +1204,7 @@ function useMyLocation(){if(navigator.geolocation){navigator.geolocation.getCurr
 function setLocation(label){$('locationChip').textContent='📍 '+label;$('marketLocation').textContent=label;$('trackLocation').textContent=label}
 function renderHome(){renderHomeProducts();renderHomeBuyAgain()}
 function getProductReviews(id){return reviews.filter(r=>r.productId===id)}
-function getProductRating(id){const rs=getProductReviews(id);if(!rs.length)return null;return rs.reduce((a,r)=>a+r.rating,0)/rs.length}
+function getProductRating(id){const rs=getProductReviews(id);if(rs.length)return rs.reduce((a,r)=>a+r.rating,0)/rs.length;const p=products.find(x=>x.id===id);const fallback=Number(p?.rating);return Number.isFinite(fallback)&&fallback>0?fallback:null}
 function canReviewProduct(id){return orders.some(o=>o.status==='Delivered'&&(o.orderItems||[]).some(it=>it.productId===id))}
 function submitReview(id){const rating=Number(prompt('Rating from 1 to 5','5'));const comment=prompt('Review comment','Fresh and good quality.');if(!Number.isInteger(rating)||rating<1||rating>5||!comment||!comment.trim()){toast('Enter a valid rating and comment');return}if(!canReviewProduct(id)){toast('Reviews are only available after a delivered purchase.');return}reviews.push({id:makeId('R'),productId:id,userId:currentUser?.contact||'guest',orderId:orders.find(o=>o.status==='Delivered'&&(o.orderItems||[]).some(it=>it.productId===id))?.id,rating,comment:comment.trim(),date:new Date().toISOString()});storage.set('ff_reviews',reviews);renderMarketplace();renderWishlist();renderHome();openProductDetails(id);toast('Verified purchase review added')}
 function getProductGuide(p){
