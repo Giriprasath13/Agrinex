@@ -4156,11 +4156,32 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
     if(desc&&!desc.configurable)return;
     Object.defineProperty(window,name,{configurable:true,enumerable:false,get:getValue,set:setValue});
   }
-  // Expose lexical app state for independent scripts without replacing the app's functions.
   aliasState('products',()=>products,value=>{if(Array.isArray(value))products=value;});
   aliasState('wish',()=>wish,value=>{if(Array.isArray(value))wish=value;});
   aliasState('cart',()=>cart,value=>{if(Array.isArray(value))cart=value;});
   aliasState('currentUser',()=>currentUser,value=>{currentUser=value;});
+
+  function wishlistKey(){return stateKey()+'_wishlist_v1';}
+  try{
+    const saved=storage.get(wishlistKey(),null);
+    if(Array.isArray(saved))wish=saved.filter(id=>products.some(p=>String(p.id)===String(id)));
+  }catch(e){console.warn('Wishlist restore skipped',e);}
+
+  window.toggleWish=function(id){
+    id=String(id);
+    if(!products.some(p=>String(p.id)===id)){toast('Product is no longer available.');return false;}
+    const adding=!wish.some(x=>String(x)===id);
+    wish=adding?[...wish,id]:wish.filter(x=>String(x)!==id);
+    try{storage.set(wishlistKey(),wish);persist();}catch(e){console.error('Wishlist save failed',e);toast('Could not save wishlist in this browser.');return false;}
+    updateBadges();
+    const active=document.querySelector('.page.active')?.id;
+    if(active==='wishlist')renderWishlist();
+    else if(active==='marketplace')renderMarketplace();
+    else if(active==='home')renderHome();
+    toast(adding?'Saved to wishlist':'Removed from wishlist');
+    return adding;
+  };
+  window.addToCartById=function(id,qty){return addToCartById(String(id),qty===undefined?1:Number(qty));};
 })();
 </script>
 
