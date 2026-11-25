@@ -710,7 +710,7 @@
 
     <section class="page" id="categories"><div class="section-head"><div><h2>Shop by category</h2><p>A real category hub with live product counts and one-tap filtering.</p></div><button class="btn btn-primary" onclick="showPage('marketplace')">Browse all →</button></div><div class="category-grid" id="categoryGrid"></div></section>
     <section class="page" id="resources"><div class="section-head"><div><h2>Grow Smarter</h2><p>Practical guides for farmers and shoppers.</p></div><button class="btn btn-soft" onclick="showPage('ai')">Ask Farm AI →</button></div><div class="resources-grid"><article class="resource-card"><div class="big">💧</div><h3>Water-smart farming</h3><p>Use soil conditions, crop stage and local weather before planning irrigation.</p></article><article class="resource-card"><div class="big">💰</div><h3>Fair pricing</h3><p>Compare farmer payout, service, delivery and market reference before selling or buying.</p></article><article class="resource-card"><div class="big">🌱</div><h3>Freshness guide</h3><p>Prefer shorter harvest age, nearer farms and verified listings when quality matters.</p></article><article class="resource-card"><div class="big">📦</div><h3>Reduce waste</h3><p>Use repeat baskets and smaller quantities to match household demand.</p></article><article class="resource-card"><div class="big">🛡️</div><h3>Safer marketplace</h3><p>Check verification, product details, delivery window and stock before ordering.</p></article><article class="resource-card"><div class="big">🤖</div><h3>Use AI wisely</h3><p>Treat demo advice as guidance and connect a verified live data/API source for production decisions.</p></article></div></section>
-    <section class="page" id="marketplace"><div class="section-head"><div><h2>Marketplace</h2><p>Search, filter and buy directly from farmers.</p></div><button class="btn btn-soft" onclick="showPage('cart')">🛒 Cart <span id="marketCartText">0</span></button></div><div class="toolbar"><input class="search-wide" id="marketSearch" list="marketSuggestions" placeholder="Search products or farmers..." oninput="renderMarketplace()"><datalist id="marketSuggestions"></datalist><button class="btn btn-light" onclick="toggleFilters()">⚙ Advanced filters</button><select id="sortSelect" onchange="renderMarketplace()"><option value="recommended">Recommended</option><option value="priceLow">Lowest price</option><option value="rating">Highest rating</option><option value="distance">Nearest farmer</option><option value="fresh">Freshest</option><option value="delivery">Fastest delivery</option></select></div><div class="quick-filters"><span>Quick filters:</span><button class="qf-btn active" data-qf="All" onclick="applyQuickFilter('All',this)">All</button><button class="qf-btn" data-qf="Vegetables" onclick="applyQuickFilter('Vegetables',this)">🥬 Vegetables</button><button class="qf-btn" data-qf="Fruits" onclick="applyQuickFilter('Fruits',this)">🍎 Fruits</button><button class="qf-btn" data-qf="Grains" onclick="applyQuickFilter('Grains',this)">🌾 Grains</button><button class="qf-btn" data-qf="Organic" onclick="applyQuickFilter('Organic',this)">🌱 Organic</button><button class="qf-btn" data-qf="Near me" onclick="nearMe()">📍 Near me</button><select aria-label="Quick distance" onchange="document.getElementById('maxDistance').value=this.value;renderMarketplace()"><option value="99">Any distance</option><option value="3">≤ 3 km</option><option value="5">≤ 5 km</option><option value="10">≤ 10 km</option></select></div><div class="recent-row" id="recentSearchRow"></div><div class="filterbox" id="filterbox" style="display:none"><div><label>Category</label><select id="filterCategory" onchange="renderMarketplace()"><option>All</option><option>Vegetables</option><option>Fruits</option><option>Grains</option><option>Dairy</option><option>Liquids</option><option>Organic</option></select></div><div><label>Max price (₹)</label><input id="maxPrice" type="number" placeholder="Any" oninput="renderMarketplace()"></div><div><label>Min rating</label><select id="minRating" onchange="renderMarketplace()"><option value="0">Any</option><option value="4.5">4.5+</option><option value="4.8">4.8+</option></select></div><div><label>Distance</label><select id="maxDistance" onchange="renderMarketplace()"><option value="99">Any</option><option value="3">Within 3 km</option><option value="5">Within 5 km</option><option value="10">Within 10 km</option></select></div><div><label>Quick filter</label><select id="quickFilter" onchange="renderMarketplace()"><option value="all">All products</option><option value="organic">Organic</option><option value="today">Available today</option><option value="recent">Harvested recently</option><option value="verified">Verified farmer</option></select></div><div class="filter-checks"><label><input type="checkbox" id="availableToday" onchange="renderMarketplace()"> Available today</label><label><input type="checkbox" id="recentHarvest" onchange="renderMarketplace()"> Harvested recently</label><label><input type="checkbox" id="verifiedOnly" onchange="renderMarketplace()"> Farmer verified</label><label><input type="checkbox" id="fastDelivery" onchange="renderMarketplace()"> Delivery ≤ 2 hours</label></div></div><div class="smart-toolbar"><div><b>✨ Smart shopping</b><span>Prioritize value, freshness and nearby farms.</span></div><div class="smart-toolbar-actions"><button class="qf-btn" onclick="applySmartRecommendation()">Best overall</button><button class="qf-btn" onclick="smartBudgetPick()">Under ₹200 basket</button><button class="qf-btn" onclick="showPage('farmers')">Meet farmers</button><button class="qf-btn" onclick="showPage('supplychain')">🚚 SIH Supply Chain</button></div></div><div class="results-row"><span id="resultCount">0 products</span><span>📍 <b id="marketLocation">Coimbatore</b> • delivery estimates shown on cards</span></div><div class="grid" id="marketProducts"></div></section>
+    <section class="page" id="marketplace"><div class="section-head"><div><h2>Marketplace</h2><p>Search, filter and buy directly from farmers.</p></div><button class="btn btn-soft" onclick="showPage('cart')">🛒 Cart <span id="marketCartText">0</span></button></div><div class="toolbar"><input class="search-wide" id="marketSearch" list="marketSuggestions" placeholder="Search products or farmers..." oninput="renderMarketplace()"><datalist id="marketSuggestions"></datalist><button class="btn btn-light" onclick="toggleFilters()">⚙ Advanced filters</button><select id="sortSelect" onchange="renderMarketplace()"><option value="recommended">Recommended</option><option value="priceLow">Lowest price</option><option value="rating">Highest rating</option><option value="distance">Nearest farmer</option><option value="fresh">Freshest</option><option value="delivery">Fastest delivery</option></select></div><div class="quick-filters"><span>Quick filters:</span><button class="qf-btn active" data-qf="All" onclick="applyQuickFilter('All',this)">All</button><button class="qf-btn" data-qf="Vegetables" onclick="applyQuickFilter('Vegetables',this)">🥬 Vegetables</button><button class="qf-btn" data-qf="Fruits" onclick="applyQuickFilter('Fruits',this)">🍎 Fruits</button><button class="qf-btn" data-qf="Grains" onclick="applyQuickFilter('Grains',this)">🌾 Grains</button><button class="qf-btn" data-qf="Organic" onclick="applyQuickFilter('Organic',this)">🌱 Organic</button><button class="qf-btn" data-qf="Near me" onclick="nearMe()">📍 Near me</button><select aria-label="Quick distance" onchange="document.getElementById('maxDistance').value=this.value;renderMarketplace()"><option value="99">Any distance</option><option value="3">≤ 3 km</option><option value="5">≤ 5 km</option><option value="10">≤ 10 km</option></select></div><div class="recent-row" id="recentSearchRow"></div><div class="filterbox" id="filterbox" style="display:none"><div><label>Category</label><select id="filterCategory" onchange="renderMarketplace()"><option>All</option><option>Vegetables</option><option>Fruits</option><option>Grains</option><option>Dairy</option><option>Liquids</option><option>Organic</option></select></div><div><label>Max price (₹)</label><input id="maxPrice" type="number" placeholder="Any" oninput="renderMarketplace()"></div><div><label>Min rating</label><select id="minRating" onchange="renderMarketplace()"><option value="0">Any</option><option value="4.5">4.5+</option><option value="4.8">4.8+</option></select></div><div><label>Distance</label><select id="maxDistance" onchange="renderMarketplace()"><option value="99">Any</option><option value="3">Within 3 km</option><option value="5">Within 5 km</option><option value="10">Within 10 km</option></select></div><div><label>Quick filter</label><select id="quickFilter" onchange="renderMarketplace()"><option value="all">All products</option><option value="organic">Organic</option><option value="today">Available today</option><option value="recent">Harvested recently</option><option value="verified">Verified farmer</option></select></div><div class="filter-checks"><label><input type="checkbox" id="availableToday" onchange="renderMarketplace()"> Available today</label><label><input type="checkbox" id="recentHarvest" onchange="renderMarketplace()"> Harvested recently</label><label><input type="checkbox" id="verifiedOnly" onchange="renderMarketplace()"> Farmer verified</label><label><input type="checkbox" id="fastDelivery" onchange="renderMarketplace()"> Delivery ≤ 2 hours</label></div><div class="filter-actions"><button type="button" class="btn btn-light" onclick="resetMarketplaceFilters()">↺ Reset filters</button></div></div><div class="smart-toolbar"><div><b>✨ Smart shopping</b><span>Prioritize value, freshness and nearby farms.</span></div><div class="smart-toolbar-actions"><button class="qf-btn" onclick="applySmartRecommendation()">Best overall</button><button class="qf-btn" onclick="smartBudgetPick()">Under ₹200 basket</button><button class="qf-btn" onclick="showPage('farmers')">Meet farmers</button><button class="qf-btn" onclick="showPage('supplychain')">🚚 SIH Supply Chain</button></div></div><div class="results-row"><span id="resultCount">0 products</span><span>📍 <b id="marketLocation">Coimbatore</b> • delivery estimates shown on cards</span></div><div class="grid" id="marketProducts"></div></section>
 
     <section class="page" id="cart"><div class="section-head"><div><h2>Your cart</h2><p>Mini-cart style checkout with savings, stock and delivery estimates.</p></div><button class="btn btn-soft" onclick="showPage('marketplace')">← Continue shopping</button></div><div class="layout2"><div class="card" id="cartList"></div><div class="card summary"><h3>Order summary</h3><div class="saved-note">💰 You see farmer-vs-market savings before checkout.</div><div class="sumrow"><span>Subtotal</span><b id="subtotal">₹0</b></div><div class="sumrow"><span>Delivery</span><b id="deliveryFee">₹0</b></div><div class="sumrow"><span>Farmer savings</span><b id="savingTotal" style="color:var(--green)">₹0</b></div><div class="sumrow total"><span>Total</span><b id="cartTotal">₹0</b></div><p class="small" style="margin:10px 0">🚚 Estimated delivery: <b id="cartEta">—</b></p><button class="btn btn-primary" style="width:100%" onclick="startCheckout()">Checkout securely →</button><button class="btn btn-light" style="width:100%;margin-top:8px" onclick="showPage('wishlist')">❤️ View wishlist</button></div></div><div class="section-head"><div><h2>Buy again</h2><p>Repeat a common basket instantly.</p></div></div><div class="grid" id="buyAgain"></div></section>
 
@@ -1199,6 +1199,15 @@ function saveRecentSearch(q){q=String(q||'').trim();if(!q)return;recentSearches=
 function renderRecentSearches(){const row=$('recentSearchRow');if(!row)return;row.innerHTML=recentSearches.length?`<span>Recent:</span>${recentSearches.map(v=>`<button class="recent-chip" onclick="$('marketSearch').value=${JSON.stringify(v)};renderMarketplace()">${safe(v)}</button>`).join('')}`:''}
 function applyQuickFilter(c,btn){const sel=$('filterCategory');if(sel)sel.value=c==='All'?'All':c;document.querySelectorAll('.qf-btn').forEach(x=>x.classList.remove('active'));if(btn)btn.classList.add('active');renderMarketplace()}
 function toggleFilters(){const f=$('filterbox');f.style.display=f.style.display==='none'?'grid':'none'}
+function resetMarketplaceFilters(){
+  const ids=['marketSearch','filterCategory','maxPrice','minRating','maxDistance','quickFilter','sortSelect'];
+  const defaults={filterCategory:'All',maxDistance:'99',minRating:'0',quickFilter:'all',sortSelect:'recommended'};
+  ids.forEach(id=>{const el=$(id);if(el)el.value=Object.prototype.hasOwnProperty.call(defaults,id)?defaults[id]:'';});
+  ['availableToday','recentHarvest','verifiedOnly','fastDelivery'].forEach(id=>{const el=$(id);if(el)el.checked=false;});
+  document.querySelectorAll('.qf-btn').forEach(btn=>btn.classList.toggle('active',btn.dataset.qf==='All'));
+  renderMarketplace();
+  toast('Marketplace filters reset');
+}
 function nearMe(){useMyLocation();showPage('marketplace');setTimeout(()=>{$('sortSelect').value='distance';renderMarketplace()},50)}
 function useMyLocation(){if(navigator.geolocation){navigator.geolocation.getCurrentPosition(()=>{setLocation('Your location');toast('Location used for nearby sorting')},()=>toast('Location permission unavailable — using Coimbatore demo location'))}else toast('Geolocation is not supported in this browser')}
 function setLocation(label){$('locationChip').textContent='📍 '+label;$('marketLocation').textContent=label;$('trackLocation').textContent=label}
@@ -1274,13 +1283,98 @@ function updateMenuCounts(){const wc=$('drawerWishCount'),cc=$('drawerCartCount'
 function renderHomeProducts(){const box=$('homeProducts');if(box)box.innerHTML=products.slice(0,4).map(productCard).join('')}
 function getBuyAgainProducts(){const ids=[];orders.forEach(o=>(o.orderItems||[]).forEach(it=>{if(it.productId&&!ids.includes(it.productId))ids.push(it.productId)}));const found=ids.map(id=>products.find(p=>p.id===id)).filter(Boolean);return found.length?found.slice(0,4):products.slice(0,4)}
 function renderHomeBuyAgain(){const box=$('homeBuyAgain');if(box)box.innerHTML=getBuyAgainProducts().map(productCard).join('')}
-function renderMarketplace(){let list=[...products];const q=($('marketSearch')?.value||'').toLowerCase();const cat=$('filterCategory')?.value||'All';const max=Number($('maxPrice')?.value||999999);const minR=Number($('minRating')?.value||0);const maxD=Number($('maxDistance')?.value||99);const quick=$('quickFilter')?.value||'all';const normalizeSearch=v=>String(v||'').toLowerCase().replace(/\bvegitable(s)?\b/g,'vegetable').replace(/\bvegetables?\b/g,'vegetable').replace(/[^a-z0-9\s]/g,' ').trim();if(q){const nq=normalizeSearch(q);const queryWords=nq.split(/\s+/).filter(Boolean);const score=p=>{const hay=normalizeSearch(p.name+' '+p.farmer+' '+p.category+' '+p.unit);if(hay.includes(nq))return 2;const hayWords=hay.split(/\s+/);const matched=queryWords.filter(w=>hayWords.some(hw=>hw===w||(w.length>=4&&hw===w+'s')||(w.length>=4&&hw+'s'===w)));return matched.length===queryWords.length?1:0};list=list.filter(p=>score(p)>0)}if(cat!=='All')list=list.filter(p=>cat==='Organic'?p.organic:p.category===cat);list=list.filter(p=>p.price<=max&&(getProductRating(p.id)||0)>=minR&&p.distance<=maxD&&p.stock>0);if(quick==='organic')list=list.filter(p=>p.organic);if(quick==='today')list=list.filter(p=>p.fresh==='Today');if(quick==='recent')list=list.filter(p=>p.harvest<=1);if(quick==='verified')list=list.filter(p=>p.verified);if($('availableToday')?.checked)list=list.filter(p=>p.fresh==='Today');if($('recentHarvest')?.checked)list=list.filter(p=>p.harvest<=1);if($('verifiedOnly')?.checked)list=list.filter(p=>p.verified);if($('fastDelivery')?.checked)list=list.filter(p=>p.hours<=2);const s=$('sortSelect')?.value||'recommended';if(s==='recommended')list.sort((a,b)=>freshnessScore(b)-freshnessScore(a)||(getProductRating(b.id)||b.rating||0)-(getProductRating(a.id)||a.rating||0)||(b.market-b.price)-(a.market-a.price));if(s==='priceLow')list.sort((a,b)=>a.price-b.price);if(s==='rating')list.sort((a,b)=>(getProductRating(b.id)||0)-(getProductRating(a.id)||0));if(s==='distance')list.sort((a,b)=>a.distance-b.distance);if(s==='fresh')list.sort((a,b)=>a.harvest-b.harvest);if(s==='delivery')list.sort((a,b)=>a.hours-b.hours);$('resultCount').textContent=`${list.length} products`;$('marketProducts').innerHTML=list.map(productCard).join('')||'<div class="card empty" style="grid-column:1/-1">🔎<h3>No products match</h3><p>Try removing a filter or searching another product.</p></div>'}
+function renderMarketplace(){
+  let list=[...products];
+  const query=String($('marketSearch')?.value||'').trim().toLowerCase();
+  const category=$('filterCategory')?.value||'All';
+  const rawMax=$('maxPrice')?.value;
+  const maxPrice=rawMax===''||rawMax==null?Infinity:Number(rawMax);
+  const minRating=Number($('minRating')?.value||0);
+  const maxDistance=Number($('maxDistance')?.value||99);
+  const quick=$('quickFilter')?.value||'all';
+  const normalize=v=>String(v||'').toLowerCase()
+    .replace(/\\bvegitable(s)?\\b/g,'vegetable')
+    .replace(/\\bvegetables?\\b/g,'vegetable')
+    .replace(/[^a-z0-9\\s]/g,' ').trim();
+  if(query){
+    const q=normalize(query),words=q.split(/\\s+/).filter(Boolean);
+    list=list.filter(p=>{
+      const hay=normalize([p.name,p.farmer,p.category,p.unit].join(' '));
+      const hayWords=hay.split(/\\s+/);
+      return hay.includes(q)||words.every(w=>hayWords.some(hw=>hw===w||(w.length>=4&&(hw===w+'s'||hw+'s'===w))));
+    });
+  }
+  if(category!=='All')list=list.filter(p=>category==='Organic'?!!p.organic:String(p.category||'')===category);
+  list=list.filter(p=>{
+    const price=Number(p.price),rating=Number(getProductRating(p.id)??p.rating??0),distance=Number(p.distance);
+    const stock=Number(p.stock)||0;
+    return Number.isFinite(price)&&price<=maxPrice&&rating>=minRating&&
+      (!Number.isFinite(distance)||distance<=maxDistance)&&stock>0;
+  });
+  if(quick==='organic')list=list.filter(p=>!!p.organic);
+  if(quick==='today')list=list.filter(p=>String(p.fresh||'').toLowerCase()==='today');
+  if(quick==='recent')list=list.filter(p=>Number(p.harvest??99)<=1);
+  if(quick==='verified')list=list.filter(p=>!!p.verified);
+  if($('availableToday')?.checked)list=list.filter(p=>String(p.fresh||'').toLowerCase()==='today');
+  if($('recentHarvest')?.checked)list=list.filter(p=>Number(p.harvest??99)<=1);
+  if($('verifiedOnly')?.checked)list=list.filter(p=>!!p.verified);
+  if($('fastDelivery')?.checked)list=list.filter(p=>Number(p.hours??Infinity)<=2);
+
+  const sort=$('sortSelect')?.value||'recommended';
+  const ratingOf=p=>Number(getProductRating(p.id)??p.rating??0);
+  const distanceOf=p=>Number.isFinite(Number(p.distance))?Number(p.distance):Infinity;
+  const hoursOf=p=>Number.isFinite(Number(p.hours))?Number(p.hours):Infinity;
+  const harvestOf=p=>Number.isFinite(Number(p.harvest))?Number(p.harvest):Infinity;
+  const priceOf=p=>Number(p.price)||0;
+  const deliveryStart=p=>{
+    const match=String(p.delivery||'').match(/(\\d{1,2})(?::(\\d{2}))?\\s*(AM|PM)/i);
+    if(!match)return Infinity;
+    let h=Number(match[1])%12+(match[3].toUpperCase()==='PM'?12:0);
+    return h*60+Number(match[2]||0);
+  };
+  if(sort==='recommended')list.sort((a,b)=>
+    freshnessScore(b)-freshnessScore(a)||ratingOf(b)-ratingOf(a)||
+    (Number(b.market)||0)-priceOf(b)-((Number(a.market)||0)-priceOf(a))||
+    distanceOf(a)-distanceOf(b));
+  else if(sort==='priceLow')list.sort((a,b)=>priceOf(a)-priceOf(b)||a.name.localeCompare(b.name));
+  else if(sort==='rating')list.sort((a,b)=>ratingOf(b)-ratingOf(a)||distanceOf(a)-distanceOf(b)||priceOf(a)-priceOf(b));
+  else if(sort==='distance')list.sort((a,b)=>distanceOf(a)-distanceOf(b)||hoursOf(a)-hoursOf(b)||priceOf(a)-priceOf(b));
+  else if(sort==='fresh')list.sort((a,b)=>harvestOf(a)-harvestOf(b)||hoursOf(a)-hoursOf(b)||distanceOf(a)-distanceOf(b));
+  else if(sort==='delivery')list.sort((a,b)=>hoursOf(a)-hoursOf(b)||deliveryStart(a)-deliveryStart(b)||distanceOf(a)-distanceOf(b)||priceOf(a)-priceOf(b));
+
+  const count=$('resultCount');if(count)count.textContent=`${list.length} products`;
+  const host=$('marketProducts');
+  if(host)host.innerHTML=list.map(productCard).join('')||'<div class="card empty" style="grid-column:1/-1">🔎<h3>No products match</h3><p>Try removing a filter or searching another product.</p><button class="btn btn-light" onclick="resetMarketplaceFilters()">Reset filters</button></div>';
+}
 function addToCartById(id,qty=1){const p=products.find(x=>x.id===id);if(!p||p.stock<qty){toast('Not enough stock');return false}const found=cart.find(x=>x.id===p.id);const next=(found?.qty||0)+qty;if(next>p.stock){toast('Maximum available stock reached');return false}if(found)found.qty=next;else cart.push({...p,qty});persist();updateBadges();renderCart();if($('miniCartDrawer')?.classList.contains('show'))renderMiniCart();toast(`${p.name} added to cart`);return true}
 function addToCart(i,qty=1){const p=products[i];if(p)addToCartById(p.id,qty)}
 function changeQty(i,d){const item=cart[i];if(!item)return;const p=products.find(x=>x.id===item.id);if(!p){cart.splice(i,1);persist();renderCart();updateBadges();toast('That product is no longer available.');return}const max=Math.max(0,Number(p.stock)||0);const next=Math.max(0,Math.min(max,item.qty+d));if(next===0)cart.splice(i,1);else cart[i]={...p,qty:next};persist();renderCart();updateBadges()}
 function removeCart(i){if(i<0||i>=cart.length)return;const name=cart[i].name;cart.splice(i,1);persist();renderCart();updateBadges();toast(`${name} removed from cart`)}
-function toggleWish(id){if(!products.some(p=>p.id===id)){toast('Product is no longer available.');wish=wish.filter(x=>x!==id);persist();updateBadges();return}const adding=!wish.includes(id);wish=adding?[...wish,id]:wish.filter(x=>x!==id);persist();updateBadges();renderWishlist();toast(adding?'Saved to wishlist':'Removed from wishlist')}
-function updateBadges(){const n=cart.reduce((a,b)=>a+b.qty,0);$('cartBadge').textContent=n;$('marketCartText').textContent=n;$('wishBadge').textContent=wish.length;const sticky=$('stickyCartText'),sub=$('stickyCartSub');if(sticky){sticky.textContent=n?`Cart • ${n} item${n===1?'':'s'}`:'Cart is empty';sub.textContent=n?`₹${cart.reduce((a,b)=>a+b.price*b.qty,0).toLocaleString('en-IN')} • Open cart`:'Add fresh products to get started'}updateMenuCounts()}
+function toggleWish(id){
+  const product=products.find(p=>String(p.id)===String(id));
+  if(!product){toast('Product is no longer available.');wish=wish.filter(x=>x!==id);persist();updateBadges();return false;}
+  const adding=!wish.includes(id);
+  wish=adding?[...wish,id]:wish.filter(x=>x!==id);
+  persist();
+  updateBadges();
+  const active=document.querySelector('.page.active')?.id;
+  if(active==='wishlist')renderWishlist();
+  else if(active==='marketplace')renderMarketplace();
+  else if(active==='home')renderHome();
+  toast(adding?'Saved to wishlist':'Removed from wishlist');
+  return adding;
+}
+function updateBadges(){
+  const count=cart.reduce((total,item)=>total+(Number(item.qty)||0),0);
+  const setText=(id,value)=>{const el=$(id);if(el)el.textContent=String(value);};
+  setText('cartBadge',count);setText('marketCartText',count);setText('wishBadge',wish.length);
+  const sticky=$('stickyCartText'),sub=$('stickyCartSub');
+  if(sticky){
+    sticky.textContent=count?`Cart • ${count} item${count===1?'':'s'}`:'Cart is empty';
+    if(sub)sub.textContent=count?`₹${cart.reduce((n,item)=>n+(Number(item.price)||0)*(Number(item.qty)||0),0).toLocaleString('en-IN')} • Open cart`:'Add fresh products to get started';
+  }
+  updateMenuCounts();
+}
 function renderCart(){const box=$('cartList');cart=cart.map(item=>{const p=products.find(p=>p.id===item.id);return p?{...p,qty:Math.min(item.qty,Math.max(0,Number(p.stock)||0))}:null}).filter(Boolean).filter(x=>x.qty>0);persist();if(!cart.length){box.innerHTML='<div class="empty">🛒<h3>Your cart is empty</h3><p>Add fresh products from nearby farmers.</p><button class="btn btn-primary" style="margin-top:14px" onclick="showPage(\'marketplace\')">Start shopping</button></div>';['subtotal','deliveryFee','savingTotal','cartTotal'].forEach(id=>$(id).textContent='₹0');$('cartEta').textContent='—';renderBuyAgain();return}let subtotal=0,market=0;box.innerHTML=cart.map((x,i)=>{subtotal+=x.price*x.qty;market+=x.market*x.qty;return `<div class="cart-item"><div class="cart-img"><img src="${safe(x.image||'')}" alt="${safe(x.name)}" onerror="this.outerHTML='<div style=\'height:100%;display:grid;place-items:center;font-size:28px\'>${safe(x.emoji)}</div>'"></div><div class="cart-main"><h3>${safe(x.name)}</h3><p>${safe(x.farmer)} • ₹${x.price}/${x.unit||'unit'}</p><div class="qty"><button aria-label="Decrease ${safe(x.name)} quantity" onclick="changeQtyById('${x.id}',-1)">−</button><b>${x.qty}</b><button aria-label="Increase ${safe(x.name)} quantity" onclick="changeQtyById('${x.id}',1)">+</button><button class="btn btn-light" style="padding:6px 9px;font-size:9px" onclick="removeCartById('${x.id}')">Remove</button></div></div><strong>₹${x.price*x.qty}</strong></div>`}).join('');const delivery=subtotal>=500?0:40;const eta=cart.every(x=>x.distance<=5)?'Today, 10:00 AM – 1:00 PM':'Tomorrow, 10:30 AM – 12:00 PM';$('subtotal').textContent='₹'+subtotal.toLocaleString('en-IN');$('deliveryFee').textContent=delivery?'₹'+delivery.toLocaleString('en-IN'):'FREE';$('savingTotal').textContent='₹'+Math.max(0,market-subtotal).toLocaleString('en-IN');$('cartTotal').textContent='₹'+(subtotal+delivery).toLocaleString('en-IN');$('cartEta').textContent=eta;renderBuyAgain()}
 function changeQtyById(id,d){const i=cart.findIndex(x=>x.id===id);if(i<0)return;changeQty(i,d)}
 function removeCartById(id){const item=cart.find(x=>x.id===id);if(!item)return;cart=cart.filter(x=>x.id!==id);persist();renderCart();updateBadges();toast(`${item.name} removed from cart`)}
@@ -2314,72 +2408,11 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
 
 
 <script id="ff-product-detail-runtime">
+// Use the main application's page-based product detail renderer.
+// A second modal renderer previously shadowed it and caused inconsistent Details clicks.
 (function(){
-  function pdGet(id){return document.getElementById(id)}
-  function pdText(v){return typeof window.safe==='function'?safe(v):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
-  function pdProduct(id){return (typeof products!=='undefined'&&Array.isArray(products)?products:[]).find(x=>String(x.id)===String(id))}
-  function pdClose(){
-    const modal=pdGet('productDetailsModal');
-    if(modal){modal.classList.remove('show');modal.setAttribute('aria-hidden','true');document.body.style.overflow=''}
-  }
-  window.closeProductDetails=pdClose;
-  window.openProductDetails=function(id){
-    const p=pdProduct(id); const modal=pdGet('productDetailsModal'); const host=pdGet('productDetailsContent');
-    if(!p||!modal||!host)return;
-    const reviews=typeof getProductReviews==='function'?getProductReviews(id):[];
-    const rating=typeof getProductRating==='function'?getProductRating(id):(p.rating||null);
-    const marketSave=Math.max(0,(Number(p.market)||0)-(Number(p.price)||0));
-    const savePct=p.market?Math.max(0,Math.round(marketSave/p.market*100)):0;
-    const stock=Number(p.stock)||0;
-    const unit=pdText(p.unit||'unit');
-    const freshness=typeof freshnessScore==='function'?freshnessScore(p):null;
-    const tags=[p.verified?'✓ Verified farmer':'Farmer listing',p.organic?'🌱 Organic':'Fresh produce',`📍 ${pdText(p.distance)} km`,`🚚 ${pdText(p.delivery||'Scheduled delivery')}`];
-    const img=p.image?`<img src="${pdText(p.image)}" alt="${pdText(p.name)}" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'">`:'';
-    host.innerHTML=`
-      <div class="product-detail-head"><div><h3>Product Details</h3><div class="small">Everything you need before ordering</div></div><button class="product-detail-close" onclick="closeProductDetails()" aria-label="Close details">×</button></div>
-      <div class="product-detail-body">
-        <div class="product-detail-grid">
-          <div>
-            <div class="product-detail-image">
-              ${img}<div class="image-fallback" style="display:${p.image?'none':'grid'}">${pdText(p.emoji||'🌱')}</div>
-              <span class="product-detail-badge">${p.organic?'🌱 ORGANIC':'FRESH TODAY'}</span>
-            </div>
-            <div class="product-detail-footer">🛡️ <b>Transparent listing:</b> price, stock, farmer and delivery information are shown before checkout.</div>
-          </div>
-          <div class="product-detail-side">
-            <div class="product-detail-tags">${tags.map(t=>`<span class="product-detail-tag">${t}</span>`).join('')}</div>
-            <div class="product-detail-title">${pdText(p.name)}</div>
-            <div class="product-detail-rating">${rating?`⭐ ${Number(rating).toFixed(1)} rating`:'☆ New listing'} • ${freshness!==null?`🌿 Freshness ${freshness}/100`:''}</div>
-            <div class="product-detail-price"><strong>₹${Number(p.price).toLocaleString('en-IN')}/${unit}</strong>${p.market?`<del>₹${Number(p.market).toLocaleString('en-IN')}</del>`:''}<span class="product-detail-save">Save ₹${marketSave.toLocaleString('en-IN')} (${savePct}%)</span></div>
-            <div class="product-detail-note">💚 You save ₹${marketSave.toLocaleString('en-IN')} versus the market reference price before checkout.</div>
-            <div class="product-detail-stats">
-              <div class="pd-stat"><span>Farmer</span><strong>${pdText(p.farmer)}</strong></div>
-              <div class="pd-stat"><span>Harvest</span><strong>${pdText(p.fresh||'Recently harvested')}</strong></div>
-              <div class="pd-stat"><span>Available stock</span><strong>${stock} ${unit}</strong></div>
-              <div class="pd-stat"><span>Delivery</span><strong>${pdText(p.delivery||'Scheduled')}</strong></div>
-            </div>
-            <div class="product-detail-section"><h4>💰 Price transparency</h4><div class="pd-price-breakdown">
-              <div class="pd-break-row"><span>Market reference</span><b>₹${Number(p.market||0).toLocaleString('en-IN')}</b></div>
-              <div class="pd-break-row"><span>AgriNex price</span><b>₹${Number(p.price||0).toLocaleString('en-IN')}</b></div>
-              <div class="pd-break-row total"><span>Buyer saving</span><b>₹${marketSave.toLocaleString('en-IN')}</b></div>
-            </div></div>
-            <div class="pd-actions">
-              <button class="btn btn-primary" ${stock<=0?'disabled':''} onclick="addToCartById('${pdText(p.id)}');closeProductDetails()">🛒 Add to cart</button>
-              <button class="btn btn-soft" ${stock<=0?'disabled':''} onclick="buyNowById('${pdText(p.id)}')">⚡ Buy now</button>
-              <button class="btn btn-soft" onclick='closeProductDetails();showFarmerProfile(${JSON.stringify(p.farmer)})'>👨‍🌾 Farmer</button>
-              <button class="btn btn-light" onclick="window.toggleWish('${pdText(p.id)}');window.openProductDetails('${pdText(p.id)}')">${(typeof wish!=='undefined'&&Array.isArray(wish)?wish:[]).includes(p.id)?'♥ Saved':'♡ Wishlist'}</button>
-            </div>
-          </div>
-        </div>
-        <div class="product-detail-section"><h4>⭐ Customer reviews ${rating?`• ${Number(rating).toFixed(1)}/5`:''}</h4>
-          <div class="product-detail-reviews">${reviews.length?reviews.slice().reverse().slice(0,4).map(r=>`<div class="pd-review"><strong>⭐ ${pdText(r.rating)}/5 • Verified purchase</strong><p>${pdText(r.comment)}</p><div class="small">${new Date(r.date).toLocaleDateString('en-IN')}</div></div>`).join(''):'<div class="small">No reviews yet. Reviews become available after a delivered purchase.</div>'}</div>
-          ${typeof canReviewProduct==='function'&&canReviewProduct(id)?`<button class="btn btn-light" style="margin-top:10px" onclick="submitReview('${pdText(p.id)}')">✍️ Write a verified review</button>`:''}
-        </div>
-      </div>`;
-    modal.classList.add('show');modal.setAttribute('aria-hidden','false');document.body.style.overflow='hidden';
-  };
-  pdGet('productDetailsModal')?.addEventListener('click',function(e){if(e.target===this)pdClose()});
-  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&pdGet('productDetailsModal')?.classList.contains('show'))pdClose()});
+  if(typeof openProductDetails==='function')window.openProductDetails=openProductDetails;
+  if(typeof closeProductDetails==='function')window.closeProductDetails=closeProductDetails;
 })();
 </script>
 
@@ -4123,34 +4156,11 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
     if(desc&&!desc.configurable)return;
     Object.defineProperty(window,name,{configurable:true,enumerable:false,get:getValue,set:setValue});
   }
+  // Expose lexical app state for independent scripts without replacing the app's functions.
   aliasState('products',()=>products,value=>{if(Array.isArray(value))products=value;});
   aliasState('wish',()=>wish,value=>{if(Array.isArray(value))wish=value;});
   aliasState('cart',()=>cart,value=>{if(Array.isArray(value))cart=value;});
   aliasState('currentUser',()=>currentUser,value=>{currentUser=value;});
-
-  window.toggleWish=function(id){return toggleWish(String(id));};
-  window.addToCartById=function(id,qty){return addToCartById(String(id),qty===undefined?1:Number(qty));};
-  window.renderWishlist=function(){return renderWishlist();};
-  window.updateBadges=function(){return updateBadges();};
-
-  const baseCard=productCard;
-  window.productCard=function(p){
-    let html=baseCard(p);
-    const id=JSON.stringify(String(p.id));
-    html=html.replace(
-      "onclick=\"toggleWish('"+p.id+"')\"",
-      "onclick='window.toggleWish("+id+")'"
-    );
-    html=html.replace(
-      "onclick=\"addToCartById('"+p.id+"')\"",
-      "onclick='window.addToCartById("+id+")'"
-    );
-    html=html.replace(
-      "onclick=\"openProductDetails('"+p.id+"')\"",
-      "onclick='window.openProductDetails("+id+")'"
-    );
-    return html;
-  };
 })();
 </script>
 
