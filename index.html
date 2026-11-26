@@ -4166,6 +4166,7 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
     const saved=storage.get(wishlistKey(),null);
     if(Array.isArray(saved))wish=saved.filter(id=>products.some(p=>String(p.id)===String(id)));
   }catch(e){console.warn('Wishlist restore skipped',e);}
+  updateBadges();
 
   window.toggleWish=function(id){
     id=String(id??'');
