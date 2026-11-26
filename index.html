@@ -4186,7 +4186,16 @@ window.addEventListener('storage',e=>{if(e.key==='ff_products'){try{const next=J
     else toast(adding?'Saved to wishlist':'Removed from wishlist');
     return adding;
   };
-  window.addToCartById=function(id,qty){return addToCartById(String(id),qty===undefined?1:Number(qty));};
+  // Capture the original implementation before assigning the public window wrapper.
+  // Calling the global name from inside its replacement would recurse indefinitely.
+  const addToCartByIdCore=addToCartById;
+  window.addToCartById=function(id,qty){
+    const product=products.find(p=>String(p.id)===String(id));
+    const amount=qty===undefined?1:Number(qty);
+    if(!product){toast('Product is no longer available.');return false;}
+    if(!Number.isFinite(amount)||amount<=0){toast('Enter a valid quantity.');return false;}
+    return addToCartByIdCore(product.id,amount);
+  };
 })();
 </script>
 
